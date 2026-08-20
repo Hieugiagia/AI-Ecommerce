@@ -1,0 +1,36 @@
+
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ai-ecommerce-backend
+
+  # 1. K?t n?i PostgreSQL
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ecommerce_db
+    username: postgres
+    password: password123
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  # 2. K?t n?i Redis Cache
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  # 3. K?t n?i RabbitMQ
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
