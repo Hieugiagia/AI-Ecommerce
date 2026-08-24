@@ -36,9 +36,7 @@ export default function App() {
       {/* Hero Banner */}
       <section className="relative overflow-hidden bg-gradient-to-b from-indigo-950/40 to-transparent border-b border-slate-900 py-12 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto text-center relative z-10">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 mb-4">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-400" /> Nền tảng E-Commerce ứng dụng AI
-          </span>
+          
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4">
             Mua sắm thông minh cùng <span className="text-indigo-400">Trợ lý ảo AI</span>
           </h1>
