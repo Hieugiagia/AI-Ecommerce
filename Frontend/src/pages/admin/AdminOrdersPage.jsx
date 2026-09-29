@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
   Filter,
@@ -15,6 +16,7 @@ import {
   Mail,
   Phone,
   Calendar,
+  Sparkles,
 } from 'lucide-react';
 
 export default function AdminOrdersPage() {
@@ -220,25 +222,30 @@ export default function AdminOrdersPage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6"
+    >
       {/* Header & Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
             {isCustomersTab ? 'Quản lý Khách hàng & Hội viên NextClub' : 'Quản lý Đơn hàng'}
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500">
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
             {isCustomersTab
               ? 'Hồ sơ khách hàng, phân hạng thành viên, tích lũy điểm thưởng NextClub 1%'
-              : 'Theo dõi tiến độ đơn, bấm nút chuyển trạng thái xử lý và giao vận'}
+              : 'Theo dõi tiến độ đơn, chuyển trạng thái xử lý và điều phối giao vận'}
           </p>
         </div>
 
         {/* Tab switch */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-200/80 rounded-2xl w-fit">
+        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl w-fit border border-slate-200/60">
           <button
             onClick={() => setSearchParams({})}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
               !isCustomersTab
                 ? 'bg-white text-slate-900 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -248,7 +255,7 @@ export default function AdminOrdersPage() {
           </button>
           <button
             onClick={() => setSearchParams({ tab: 'customers' })}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
               isCustomersTab
                 ? 'bg-white text-indigo-700 shadow-xs'
                 : 'text-slate-600 hover:text-slate-900'
@@ -269,14 +276,14 @@ export default function AdminOrdersPage() {
             </span>
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500">Chính sách:</span>
-              <span className="text-xs font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200">
+              <span className="text-xs font-bold text-amber-600 bg-amber-50 px-3 py-1 rounded-full border border-amber-200/60">
                 Tích luỹ 1% điểm cho mọi đơn hàng
               </span>
             </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-xs sm:text-sm text-left">
-              <thead className="bg-slate-50/75 text-slate-500 font-semibold border-b border-slate-100 uppercase text-[11px] tracking-wider">
+              <thead className="bg-slate-50/75 text-slate-400 font-bold border-b border-slate-100 uppercase text-[11px] tracking-wider">
                 <tr>
                   <th className="py-3.5 px-6">Khách hàng</th>
                   <th className="py-3.5 px-6">Hạng thành viên</th>
@@ -298,7 +305,7 @@ export default function AdminOrdersPage() {
                       </div>
                     </td>
                     <td className="py-4 px-6">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${c.tierColor}`}>
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${c.tierColor}`}>
                         {c.tier}
                       </span>
                     </td>
@@ -306,14 +313,14 @@ export default function AdminOrdersPage() {
                       {formatVND(c.totalSpent)}
                     </td>
                     <td className="py-4 px-6">
-                      <span className="font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                      <span className="font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
                         ⭐ {c.points.toLocaleString('vi-VN')} điểm
                       </span>
                     </td>
                     <td className="py-4 px-6 font-semibold text-slate-700">
                       {c.ordersCount} đơn
                     </td>
-                    <td className="py-4 px-6 text-slate-500 text-xs">
+                    <td className="py-4 px-6 text-slate-500 text-xs font-medium">
                       {c.joinDate}
                     </td>
                   </tr>
@@ -325,185 +332,198 @@ export default function AdminOrdersPage() {
       ) : (
         /* ================= BẢNG ĐƠN HÀNG THƯỜNG ================= */
         <div className="p-6 bg-white border border-slate-200/80 rounded-3xl shadow-xs space-y-6">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="relative w-full sm:w-80">
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Tìm theo mã đơn, tên khách, email..."
-              className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm pl-9 pr-3 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white text-slate-800"
-            />
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="relative w-full sm:w-80">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Tìm theo mã đơn, tên khách, email..."
+                className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm pl-9 pr-3 py-2.5 rounded-2xl outline-none focus:border-indigo-600 focus:bg-white text-slate-800 transition-all"
+              />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            </div>
 
-          {/* Filter Status Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
-            {[
-              { id: 'all', label: 'Tất cả' },
-              { id: 'Chờ xác nhận', label: 'Chờ xác nhận' },
-              { id: 'Đang xử lý', label: 'Đang xử lý' },
-              { id: 'Đang giao hàng', label: 'Đang giao' },
-              { id: 'Đã hoàn thành', label: 'Hoàn thành' },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setStatusFilter(tab.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
-                  statusFilter === tab.id
-                    ? 'bg-slate-900 text-white shadow-xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs sm:text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 text-slate-400 font-semibold uppercase tracking-wider text-[11px]">
-                <th className="py-3 px-3">Mã đơn</th>
-                <th className="py-3 px-3">Khách hàng</th>
-                <th className="py-3 px-3">Sản phẩm</th>
-                <th className="py-3 px-3">Số tiền</th>
-                <th className="py-3 px-3">Phương thức</th>
-                <th className="py-3 px-3">Trạng thái hiện tại</th>
-                <th className="py-3 px-3 text-right">Đổi trạng thái</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 font-medium">
-              {filteredOrders.map((ord) => (
-                <tr key={ord.id} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="py-3.5 px-3">
-                    <span className="font-bold text-slate-900">{ord.id}</span>
-                    <p className="text-[10px] text-slate-400">{ord.date}</p>
-                  </td>
-                  <td className="py-3.5 px-3">
-                    <p className="font-semibold text-slate-900">{ord.customer}</p>
-                    <p className="text-[11px] text-slate-400">{ord.phone}</p>
-                  </td>
-                  <td className="py-3.5 px-3">
-                    <p className="text-slate-800 line-clamp-1">{ord.product}</p>
-                    <span className="text-[10px] text-slate-400">{ord.itemsCount} món</span>
-                  </td>
-                  <td className="py-3.5 px-3 font-bold text-slate-900">{formatVND(ord.total)}</td>
-                  <td className="py-3.5 px-3 text-slate-600 text-xs">{ord.payment}</td>
-                  <td className="py-3.5 px-3">
-                    <span
-                      className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
-                        ord.status === 'Đã hoàn thành'
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : ord.status === 'Đang giao hàng'
-                          ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                          : ord.status === 'Đang xử lý'
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                          : 'bg-amber-50 text-amber-700 border border-amber-200'
-                      }`}
-                    >
-                      {ord.status === 'Đã hoàn thành' && <CheckCircle2 className="w-3 h-3" />}
-                      {ord.status === 'Đang giao hàng' && <Truck className="w-3 h-3" />}
-                      {ord.status === 'Chờ xác nhận' && <Clock className="w-3 h-3" />}
-                      {ord.status}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <select
-                        value={ord.status}
-                        onChange={(e) => handleStatusChange(ord.id, e.target.value)}
-                        className="bg-slate-50 border border-slate-200 text-xs text-slate-700 py-1.5 px-2.5 rounded-lg outline-none cursor-pointer focus:border-indigo-500 font-semibold"
-                      >
-                        <option value="Chờ xác nhận">Chờ xác nhận</option>
-                        <option value="Đang xử lý">Đang xử lý</option>
-                        <option value="Đang giao hàng">Đang giao hàng</option>
-                        <option value="Đã hoàn thành">Đã hoàn thành</option>
-                        <option value="Đã hủy">Đã hủy</option>
-                      </select>
-
-                      <button
-                        onClick={() => setViewingOrder(ord)}
-                        className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors cursor-pointer"
-                        title="Xem chi tiết đơn"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+            {/* Filter Status Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+              {[
+                { id: 'all', label: 'Tất cả' },
+                { id: 'Chờ xác nhận', label: 'Chờ xác nhận' },
+                { id: 'Đang xử lý', label: 'Đang xử lý' },
+                { id: 'Đang giao hàng', label: 'Đang giao' },
+                { id: 'Đã hoàn thành', label: 'Hoàn thành' },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setStatusFilter(tab.id)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                    statusFilter === tab.id
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80'
+                  }`}
+                >
+                  {tab.label}
+                </button>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs sm:text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 text-slate-400 font-bold uppercase tracking-wider text-[11px]">
+                  <th className="py-3.5 px-3">Mã đơn</th>
+                  <th className="py-3.5 px-3">Khách hàng</th>
+                  <th className="py-3.5 px-3">Sản phẩm</th>
+                  <th className="py-3.5 px-3">Số tiền</th>
+                  <th className="py-3.5 px-3">Phương thức</th>
+                  <th className="py-3.5 px-3">Trạng thái hiện tại</th>
+                  <th className="py-3.5 px-3 text-right">Đổi trạng thái</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 font-medium">
+                {filteredOrders.map((ord) => (
+                  <tr key={ord.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-4 px-3">
+                      <span className="font-bold text-slate-900">{ord.id}</span>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{ord.date}</p>
+                    </td>
+                    <td className="py-4 px-3">
+                      <p className="font-semibold text-slate-900">{ord.customer}</p>
+                      <p className="text-[11px] text-slate-400">{ord.phone}</p>
+                    </td>
+                    <td className="py-4 px-3">
+                      <p className="text-slate-800 line-clamp-1">{ord.product}</p>
+                      <span className="text-[10px] text-slate-400">{ord.itemsCount} món</span>
+                    </td>
+                    <td className="py-4 px-3 font-bold text-slate-900">{formatVND(ord.total)}</td>
+                    <td className="py-4 px-3 text-slate-600 text-xs">{ord.payment}</td>
+                    <td className="py-4 px-3">
+                      <span
+                        className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${
+                          ord.status === 'Đã hoàn thành'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : ord.status === 'Đang giao hàng'
+                            ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                            : ord.status === 'Đang xử lý'
+                            ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                        }`}
+                      >
+                        {ord.status === 'Đã hoàn thành' && <CheckCircle2 className="w-3 h-3" />}
+                        {ord.status === 'Đang giao hàng' && <Truck className="w-3 h-3" />}
+                        {ord.status === 'Chờ xác nhận' && <Clock className="w-3 h-3" />}
+                        {ord.status}
+                      </span>
+                    </td>
+                    <td className="py-4 px-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <select
+                          value={ord.status}
+                          onChange={(e) => handleStatusChange(ord.id, e.target.value)}
+                          className="bg-slate-50 border border-slate-200 text-xs text-slate-700 py-1.5 px-3 rounded-xl outline-none cursor-pointer focus:border-indigo-600 font-semibold transition-all"
+                        >
+                          <option value="Chờ xác nhận">Chờ xác nhận</option>
+                          <option value="Đang xử lý">Đang xử lý</option>
+                          <option value="Đang giao hàng">Đang giao hàng</option>
+                          <option value="Đã hoàn thành">Đã hoàn thành</option>
+                          <option value="Đã hủy">Đã hủy</option>
+                        </select>
+
+                        <button
+                          onClick={() => setViewingOrder(ord)}
+                          className="p-2 text-slate-400 hover:text-indigo-600 rounded-xl hover:bg-indigo-50 transition-colors cursor-pointer"
+                          title="Xem chi tiết đơn"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
       )}
 
       {/* ===================== MODAL XEM CHI TIẾT ĐƠN HÀNG ===================== */}
-      {viewingOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 sm:p-8 overflow-y-auto max-h-[90vh] space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Chi tiết đơn hàng #{viewingOrder.id}</h3>
-                <p className="text-xs text-slate-400">Thời gian tạo: {viewingOrder.date}</p>
+      <AnimatePresence>
+        {viewingOrder && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 sm:p-8 overflow-y-auto max-h-[90vh] space-y-6"
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">Chi tiết đơn hàng #{viewingOrder.id}</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Thời gian tạo: {viewingOrder.date}</p>
+                </div>
+                <button
+                  onClick={() => setViewingOrder(null)}
+                  className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 cursor-pointer transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-              <button
-                onClick={() => setViewingOrder(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
 
-            {/* Thông tin khách hàng */}
-            <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-1.5 text-xs text-slate-600">
-              <p><span className="font-semibold text-slate-800">Người nhận:</span> {viewingOrder.customer}</p>
-              <p><span className="font-semibold text-slate-800">Điện thoại:</span> {viewingOrder.phone}</p>
-              <p><span className="font-semibold text-slate-800">Email:</span> {viewingOrder.email}</p>
-              <p><span className="font-semibold text-slate-800">Địa chỉ:</span> {viewingOrder.address}</p>
-              <p><span className="font-semibold text-slate-800">Phương thức:</span> {viewingOrder.payment}</p>
-            </div>
+              {/* Thông tin khách hàng */}
+              <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-2 text-xs text-slate-600">
+                <p><span className="font-bold text-slate-800">Người nhận:</span> {viewingOrder.customer}</p>
+                <p><span className="font-bold text-slate-800">Điện thoại:</span> {viewingOrder.phone}</p>
+                <p><span className="font-bold text-slate-800">Email:</span> {viewingOrder.email}</p>
+                <p><span className="font-bold text-slate-800">Địa chỉ:</span> {viewingOrder.address}</p>
+                <p><span className="font-bold text-slate-800">Phương thức:</span> {viewingOrder.payment}</p>
+              </div>
 
-            {/* Danh sách items */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Sản phẩm trong đơn ({viewingOrder.items?.length || 1})
-              </h4>
-              <div className="divide-y divide-slate-100">
-                {viewingOrder.items?.map((item, index) => (
-                  <div key={index} className="py-2.5 flex items-center justify-between gap-3 text-xs">
-                    <div className="flex items-center gap-3">
-                      <img src={item.image} alt={item.name} className="w-10 h-10 rounded-lg object-cover bg-slate-100" />
-                      <div>
-                        <p className="font-semibold text-slate-900">{item.name}</p>
-                        <p className="text-slate-400">{item.variant ? `Phân loại: ${item.variant} • ` : ''}SL: {item.quantity}</p>
+              {/* Danh sách items */}
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Sản phẩm trong đơn ({viewingOrder.items?.length || 1})
+                </h4>
+                <div className="divide-y divide-slate-100">
+                  {viewingOrder.items?.map((item, index) => (
+                    <div key={index} className="py-3 flex items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-3">
+                        <img src={item.image} alt={item.name} className="w-12 h-12 rounded-xl object-cover bg-slate-100 shrink-0" />
+                        <div>
+                          <p className="font-bold text-slate-900">{item.name}</p>
+                          <p className="text-slate-400 mt-0.5">{item.variant ? `Phân loại: ${item.variant} • ` : ''}SL: {item.quantity}</p>
+                        </div>
                       </div>
+                      <span className="font-black text-slate-900">{formatVND(item.price * item.quantity)}</span>
                     </div>
-                    <span className="font-bold text-slate-900">{formatVND(item.price * item.quantity)}</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
 
-            {/* Tổng tiền & Nút đóng */}
-            <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-              <div>
-                <span className="text-xs text-slate-400">Tổng thanh toán:</span>
-                <p className="text-lg font-extrabold text-indigo-600">{formatVND(viewingOrder.total)}</p>
+              {/* Tổng tiền & Nút đóng */}
+              <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-slate-400 font-medium">Tổng thanh toán:</span>
+                  <p className="text-xl font-black text-indigo-600">{formatVND(viewingOrder.total)}</p>
+                </div>
+                <button
+                  onClick={() => setViewingOrder(null)}
+                  className="px-6 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl text-xs font-bold cursor-pointer transition-colors"
+                >
+                  Đóng
+                </button>
               </div>
-              <button
-                onClick={() => setViewingOrder(null)}
-                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold cursor-pointer"
-              >
-                Đóng
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }

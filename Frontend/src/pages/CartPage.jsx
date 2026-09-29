@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Trash2,
   ArrowRight,
@@ -48,17 +49,22 @@ export default function CartPage() {
   if (cart.length === 0) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-16 sm:py-24 text-center space-y-6">
-        <div className="w-20 h-20 bg-slate-100 rounded-3xl flex items-center justify-center mx-auto text-slate-400">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          className="w-20 h-20 bg-indigo-50 border border-indigo-100 rounded-3xl flex items-center justify-center mx-auto text-indigo-500 shadow-sm"
+        >
           <ShoppingBag className="w-10 h-10" />
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Giỏ hàng của bạn đang trống</h1>
+        </motion.div>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Giỏ hàng của bạn đang trống</h1>
         <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
-          Hãy dạo quanh các sản phẩm công nghệ hot nhất và chọn cho mình thiết bị ưng ý nhé!
+          Hãy dạo quanh các sản phẩm công nghệ AI hot nhất và chọn cho mình thiết bị ưng ý nhé!
         </p>
         <div>
           <Link
             to="/products"
-            className="inline-flex items-center gap-2 px-6 py-3.5 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-sm font-semibold shadow-md transition-all"
+            className="inline-flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-full text-xs sm:text-sm font-semibold shadow-lg shadow-indigo-500/25 transition-all"
           >
             <span>Tiếp tục mua sắm</span>
             <ArrowRight className="w-4 h-4" />
@@ -82,7 +88,7 @@ export default function CartPage() {
           >
             <ChevronLeft className="w-4 h-4" /> Tiếp tục xem sản phẩm
           </Link>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Giỏ hàng của bạn ({cart.length} sản phẩm)
           </h1>
         </div>
@@ -99,7 +105,7 @@ export default function CartPage() {
         {/* CỘT TRÁI: Danh sách sản phẩm (7 cột) */}
         <div className="lg:col-span-7 space-y-4">
           {/* Thanh Freeship Progress */}
-          <div className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-xs">
+          <div className="p-4 bg-white border border-slate-200/80 rounded-3xl shadow-xs">
             {subtotal >= freeShippingThreshold ? (
               <p className="text-xs font-semibold text-emerald-600 flex items-center gap-1.5">
                 <Check className="w-4 h-4" /> Chúc mừng! Đơn hàng của bạn đã đủ điều kiện{' '}
@@ -116,7 +122,7 @@ export default function CartPage() {
                 </p>
                 <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
                   <div
-                    className="bg-indigo-600 h-full rounded-full transition-all duration-300"
+                    className="bg-gradient-to-r from-indigo-500 to-violet-600 h-full rounded-full transition-all duration-300"
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
@@ -124,85 +130,92 @@ export default function CartPage() {
             )}
           </div>
 
-          {/* Danh sách items */}
+          {/* Danh sách items with AnimatePresence */}
           <div className="space-y-3">
-            {cart.map((item) => (
-              <div
-                key={item.key}
-                className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-xs flex flex-col sm:flex-row items-center gap-4 hover:border-slate-300 transition-all"
-              >
-                {/* Ảnh */}
-                <Link
-                  to={`/product/${item.id}`}
-                  className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 shrink-0"
+            <AnimatePresence>
+              {cart.map((item) => (
+                <motion.div
+                  key={item.key}
+                  layout
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  transition={{ duration: 0.2 }}
+                  className="p-4 bg-white border border-slate-200/80 rounded-3xl shadow-xs flex flex-col sm:flex-row items-center gap-4 hover:border-indigo-200 transition-all"
                 >
-                  <img
-                    src={item.image}
-                    alt={item.name}
-                    className="w-full h-full object-cover"
-                  />
-                </Link>
-
-                {/* Thông tin */}
-                <div className="flex-1 min-w-0 text-center sm:text-left">
+                  {/* Ảnh */}
                   <Link
                     to={`/product/${item.id}`}
-                    className="font-semibold text-sm text-slate-900 hover:text-indigo-600 line-clamp-1 transition-colors"
+                    className="w-20 h-20 rounded-2xl overflow-hidden bg-slate-50 p-2 shrink-0 border border-slate-100"
                   >
-                    {item.name}
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-full h-full object-contain"
+                    />
                   </Link>
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 mt-1 text-[11px] text-slate-500">
-                    {item.variant && (
-                      <span className="bg-slate-100 px-2 py-0.5 rounded font-medium text-slate-700">
-                        {item.variant}
-                      </span>
-                    )}
-                    {item.color && (
-                      <span className="bg-slate-100 px-2 py-0.5 rounded font-medium text-slate-700 flex items-center gap-1">
-                        {item.colorCode && (
-                          <span
-                            className="w-2 h-2 rounded-full inline-block border border-slate-300"
-                            style={{ backgroundColor: item.colorCode }}
-                          />
-                        )}
-                        {item.color}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-sm font-bold text-slate-900 mt-2">
-                    {formatVND(item.unitPrice)}
-                  </div>
-                </div>
 
-                {/* Bộ đếm số lượng */}
-                <div className="flex items-center border border-slate-200 rounded-xl overflow-hidden bg-slate-50">
-                  <button
-                    onClick={() => updateQuantity(item.key, -1)}
-                    className="px-2.5 py-1 text-slate-600 hover:bg-slate-200 transition-colors font-bold cursor-pointer"
-                  >
-                    -
-                  </button>
-                  <span className="px-3 py-1 text-xs font-bold text-slate-900 min-w-[2rem] text-center">
-                    {item.quantity}
-                  </span>
-                  <button
-                    onClick={() => updateQuantity(item.key, 1)}
-                    className="px-2.5 py-1 text-slate-600 hover:bg-slate-200 transition-colors font-bold cursor-pointer"
-                  >
-                    +
-                  </button>
-                </div>
+                  {/* Thông tin */}
+                  <div className="flex-1 min-w-0 text-center sm:text-left">
+                    <Link
+                      to={`/product/${item.id}`}
+                      className="font-semibold text-sm text-slate-900 hover:text-indigo-600 line-clamp-1 transition-colors"
+                    >
+                      {item.name}
+                    </Link>
+                    <div className="flex flex-wrap items-center justify-center sm:justify-start gap-1.5 mt-1 text-[11px] text-slate-500">
+                      {item.variant && (
+                        <span className="bg-slate-100 px-2 py-0.5 rounded-full font-medium text-slate-700">
+                          {item.variant}
+                        </span>
+                      )}
+                      {item.color && (
+                        <span className="bg-slate-100 px-2 py-0.5 rounded-full font-medium text-slate-700 flex items-center gap-1">
+                          {item.colorCode && (
+                            <span
+                              className="w-2 h-2 rounded-full inline-block border border-slate-300"
+                              style={{ backgroundColor: item.colorCode }}
+                            />
+                          )}
+                          {item.color}
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-sm font-bold text-slate-900 mt-2">
+                      {formatVND(item.unitPrice)}
+                    </div>
+                  </div>
 
-                {/* Nút xóa */}
-                <button
-                  onClick={() => removeFromCart(item.key)}
-                  className="p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors cursor-pointer"
-                  title="Xóa khỏi giỏ"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
+                  {/* Bộ đếm số lượng */}
+                  <div className="flex items-center border border-slate-200 rounded-full overflow-hidden bg-slate-50 shadow-2xs">
+                    <button
+                      onClick={() => updateQuantity(item.key, -1)}
+                      className="px-3 py-1 text-slate-600 hover:bg-slate-200 transition-colors font-bold cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <span className="px-3 py-1 text-xs font-bold text-slate-900 min-w-[2rem] text-center">
+                      {item.quantity}
+                    </span>
+                    <button
+                      onClick={() => updateQuantity(item.key, 1)}
+                      className="px-3 py-1 text-slate-600 hover:bg-slate-200 transition-colors font-bold cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  {/* Nút xóa */}
+                  <button
+                    onClick={() => removeFromCart(item.key)}
+                    className="p-2.5 text-slate-400 hover:text-rose-600 rounded-full hover:bg-rose-50 transition-colors cursor-pointer"
+                    title="Xóa khỏi giỏ"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         </div>
 
@@ -225,13 +238,13 @@ export default function CartPage() {
                     value={couponCode}
                     onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
                     placeholder="VD: AITECH10, FREESHIP"
-                    className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm pl-9 pr-3 py-2.5 rounded-xl uppercase outline-none focus:border-indigo-500 focus:bg-white text-slate-800"
+                    className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm pl-9 pr-3 py-2.5 rounded-full uppercase outline-none focus:border-indigo-500 focus:bg-white text-slate-800"
                   />
                   <Tag className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 </div>
                 <button
                   type="submit"
-                  className="px-4 py-2.5 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer"
+                  className="px-4 py-2.5 bg-slate-900 hover:bg-indigo-600 text-white rounded-full text-xs font-semibold transition-all cursor-pointer shadow-xs"
                 >
                   Áp dụng
                 </button>
@@ -243,7 +256,7 @@ export default function CartPage() {
               )}
 
               {appliedVoucher && (
-                <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs text-emerald-800">
+                <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-xs text-emerald-800">
                   <div>
                     <span className="font-bold">{appliedVoucher.code}</span>: {appliedVoucher.description}
                   </div>
@@ -263,7 +276,7 @@ export default function CartPage() {
                   <button
                     key={v.code}
                     onClick={() => applyVoucher(v.code)}
-                    className="text-[10px] font-bold bg-slate-100 hover:bg-indigo-50 text-indigo-700 border border-slate-200 hover:border-indigo-200 px-2 py-0.5 rounded cursor-pointer transition-colors"
+                    className="text-[10px] font-bold bg-slate-100 hover:bg-indigo-50 text-indigo-700 border border-slate-200 hover:border-indigo-200 px-2.5 py-0.5 rounded-full cursor-pointer transition-colors"
                   >
                     {v.code}
                   </button>
@@ -297,7 +310,9 @@ export default function CartPage() {
             </div>
 
             {/* Nút Đặt hàng */}
-            <button
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
               onClick={() => {
                 if (!isAuthenticated) {
                   navigate('/login', { state: { from: { pathname: '/checkout' } } });
@@ -305,15 +320,15 @@ export default function CartPage() {
                   navigate('/checkout');
                 }
               }}
-              className="w-full py-4 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-900/10 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-4 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl text-sm font-bold shadow-lg shadow-indigo-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>{isAuthenticated ? 'Tiến hành đặt hàng' : 'Đăng nhập để đặt hàng'}</span>
               <ArrowRight className="w-4 h-4" />
-            </button>
+            </motion.button>
 
             {!isAuthenticated && (
-              <p className="text-[11px] text-center text-amber-600 font-medium bg-amber-50 py-1.5 px-3 rounded-lg border border-amber-200/60">
-                🔒 Vui lòng đăng nhập tài khoản để tiến hành thanh toán & lưu đơn hàng.
+              <p className="text-[11px] text-center text-amber-700 font-medium bg-amber-50 py-2 px-3 rounded-xl border border-amber-200">
+                🔒 Vui lòng đăng nhập tài khoản để tiến hành thanh toán &amp; lưu đơn hàng.
               </p>
             )}
 

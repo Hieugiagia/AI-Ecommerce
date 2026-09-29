@@ -1,5 +1,6 @@
 import React from 'react';
 import { Navigate, useLocation, Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { ShieldAlert, ArrowLeft, LogIn } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -16,13 +17,18 @@ export default function AdminRoute({ children }) {
   if (!isAdmin) {
     return (
       <div className="min-h-[75vh] flex items-center justify-center p-4">
-        <div className="max-w-md w-full p-8 bg-white border border-slate-200/90 rounded-3xl shadow-xl text-center space-y-5">
-          <div className="w-16 h-16 rounded-3xl bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center mx-auto">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 15 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          className="max-w-md w-full p-8 bg-white border border-slate-200/90 rounded-3xl shadow-xl shadow-slate-900/5 text-center space-y-5"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-600 border border-rose-100 flex items-center justify-center mx-auto shadow-xs">
             <ShieldAlert className="w-8 h-8" />
           </div>
 
           <div className="space-y-2">
-            <span className="text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+            <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
               Lỗi 403: Quyền truy cập bị từ chối
             </span>
             <h2 className="text-xl font-bold text-slate-900">Khu vực dành riêng cho Quản trị viên</h2>
@@ -32,26 +38,27 @@ export default function AdminRoute({ children }) {
           </div>
 
           <div className="pt-2 space-y-2.5">
-            <button
+            <motion.button
+              whileTap={{ scale: 0.98 }}
               onClick={() => {
                 logout();
                 navigate('/login', { state: { from: location } });
               }}
-              className="w-full py-3 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-3 bg-slate-900 hover:bg-indigo-600 text-white rounded-2xl text-xs sm:text-sm font-semibold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
             >
               <LogIn className="w-4 h-4" />
               <span>Đăng nhập tài khoản Quản trị</span>
-            </button>
+            </motion.button>
 
             <Link
               to="/"
-              className="w-full inline-flex items-center justify-center gap-2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors"
+              className="w-full inline-flex items-center justify-center gap-2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-semibold transition-colors"
             >
               <ArrowLeft className="w-4 h-4" />
               <span>Quay lại Cửa hàng</span>
             </Link>
           </div>
-        </div>
+        </motion.div>
       </div>
     );
   }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, Sparkles, ArrowRight, Check } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Mail, Lock, Eye, EyeOff, Sparkles, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {
@@ -16,105 +17,79 @@ export default function LoginPage() {
   const location = useLocation();
   const redirectPath = location.state?.from?.pathname || '/profile';
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    if (!email || !password) {
+    if (!email.trim() || !password.trim()) {
       setError('Vui lòng điền đầy đủ email và mật khẩu.');
       return;
     }
 
     setLoading(true);
-    setTimeout(() => {
-      const res = login(email, password);
+
+    try {
+      const res = await login(email, password);
       setLoading(false);
 
       if (!res?.success) {
-        setError(res?.error || 'Đăng nhập không thành công.');
+        setError(res?.error || 'Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin.');
         return;
       }
 
-      // Nếu đăng nhập đúng tài khoản Quản trị Admin -> Chuyển thẳng vào Bảng Quản trị /admin/dashboard
+      // Điều hướng dựa theo quyền người dùng trả về từ Backend
       if (res.role === 'admin') {
         navigate('/admin/dashboard', { replace: true });
       } else {
-        // Tài khoản khách hàng thông thường -> Không cho vào /admin, chuyển đến /profile hoặc trang trước đó
         const target = redirectPath.startsWith('/admin') ? '/profile' : redirectPath;
         navigate(target, { replace: true });
       }
-    }, 500);
-  };
-
-  const handleFillDemo = (demoEmail, demoPassword) => {
-    setEmail(demoEmail);
-    setPassword(demoPassword);
-    setError('');
+    } catch (err) {
+      setLoading(false);
+      setError(err.message || 'Đã xảy ra lỗi trong quá trình kết nối.');
+    }
   };
 
   return (
-    <div className="min-h-[calc(100vh-14rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50/60">
-      <div className="w-full max-w-md space-y-6 bg-white p-8 sm:p-10 border border-slate-200/90 rounded-3xl shadow-xl shadow-slate-200/50">
+    <div className="min-h-[calc(100vh-14rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50/50">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="w-full max-w-md space-y-6 bg-white p-8 sm:p-10 border border-slate-200/80 rounded-3xl shadow-xl shadow-slate-900/5 relative overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 w-44 h-44 bg-indigo-50 rounded-full blur-3xl pointer-events-none -mr-10 -mt-10" />
+
         {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 mb-2">
-            <Sparkles className="w-6 h-6" />
+        <div className="text-center space-y-2 relative z-10">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-200/60 mb-2 shadow-xs">
+            <Sparkles className="w-6 h-6 text-indigo-600" />
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Đăng nhập hệ thống
           </h2>
           <p className="text-xs sm:text-sm text-slate-500">
-            Khách hàng mua sắm hoặc Quản trị viên đăng nhập điều hành
+            Nhập email và mật khẩu của bạn để truy cập tài khoản
           </p>
         </div>
 
-        {/* Bảng chọn tài khoản Demo nhanh để kiểm tra phân quyền */}
-        <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200/90 space-y-2">
-          <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider text-center">
-            Chọn tài khoản Demo để kiểm tra phân quyền:
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => handleFillDemo('khachhang@alibabastore.vn', '123456')}
-              className="p-2.5 rounded-xl border border-slate-200 bg-white hover:border-indigo-400 hover:bg-indigo-50/40 text-left transition-all cursor-pointer group"
-            >
-              <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800 group-hover:text-indigo-600">
-                <span>👤 Khách hàng</span>
-              </div>
-              <p className="text-[10px] text-slate-400 truncate mt-0.5">khachhang@alibabastore.vn</p>
-              <span className="inline-block text-[9px] font-semibold text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded mt-1">
-                Quyền User
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleFillDemo('admin@alibabastore.vn', 'admin123')}
-              className="p-2.5 rounded-xl border border-slate-200 bg-white hover:border-indigo-400 hover:bg-indigo-50/40 text-left transition-all cursor-pointer group"
-            >
-              <div className="flex items-center gap-1.5 font-bold text-xs text-slate-800 group-hover:text-indigo-600">
-                <span>🛡️ Quản trị viên</span>
-              </div>
-              <p className="text-[10px] text-slate-400 truncate mt-0.5">admin@alibabastore.vn</p>
-              <span className="inline-block text-[9px] font-semibold text-indigo-600 bg-indigo-50 px-1.5 py-0.5 rounded mt-1">
-                Quyền Admin
-              </span>
-            </button>
-          </div>
-        </div>
-
+        {/* Thông báo lỗi */}
         {error && (
-          <div className="p-3 bg-rose-50 border border-rose-200 text-rose-600 text-xs rounded-xl font-medium">
-            {error}
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-2xl font-medium flex items-start gap-2.5"
+          >
+            <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+            <div className="leading-relaxed">{error}</div>
+          </motion.div>
         )}
 
         {/* Form đăng nhập */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Email đăng ký
+              Địa chỉ Email *
             </label>
             <div className="relative">
               <input
@@ -122,8 +97,8 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="tenban@email.com"
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm pl-10 pr-4 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white transition-all"
+                placeholder="name@example.com"
+                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm pl-10 pr-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all"
               />
               <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             </div>
@@ -131,10 +106,10 @@ export default function LoginPage() {
 
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="block text-xs font-semibold text-slate-700">Mật khẩu</label>
+              <label className="text-xs font-semibold text-slate-700">Mật khẩu *</label>
               <Link
                 to="/forgot-password"
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-700"
+                className="text-xs font-medium text-indigo-600 hover:underline"
               >
                 Quên mật khẩu?
               </Link>
@@ -146,13 +121,13 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm pl-10 pr-10 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white transition-all"
+                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm pl-10 pr-10 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all"
               />
               <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="p-1 text-slate-400 hover:text-slate-600 absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -165,46 +140,45 @@ export default function LoginPage() {
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
               />
               <span className="text-xs text-slate-600 font-medium">Ghi nhớ đăng nhập</span>
             </label>
           </div>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-sm font-semibold transition-all shadow-md shadow-slate-900/10 cursor-pointer flex items-center justify-center gap-2"
+            className="w-full py-3 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl text-xs sm:text-sm font-semibold transition-all shadow-md shadow-indigo-500/25 cursor-pointer flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {loading ? (
-              <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
               <>
                 <span>Đăng nhập</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
-          </button>
+          </motion.button>
         </form>
 
-        {/* Social Login */}
-        <div className="space-y-4">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-white px-3 text-slate-400 font-medium">Hoặc tiếp tục với</span>
-            </div>
+        {/* Đăng nhập nhanh bằng mạng xã hội */}
+        <div className="relative z-10 pt-2">
+          <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t border-slate-200"></div>
+            <span className="flex-shrink mx-3 text-slate-400 text-[11px] font-medium uppercase tracking-wider">
+              Hoặc tiếp tục với
+            </span>
+            <div className="flex-grow border-t border-slate-200"></div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3 mt-3">
             <button
-              onClick={() => {
-                login('google.user@gmail.com', 'google123');
-                navigate('/profile');
-              }}
-              className="flex items-center justify-center gap-2 py-2.5 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition-all cursor-pointer"
+              type="button"
+              onClick={() => setError('Tính năng đăng nhập Google sẽ kích hoạt khi tích hợp OAuth2 trên Backend.')}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border border-slate-200 hover:bg-slate-50 transition-colors text-xs font-semibold text-slate-700 cursor-pointer shadow-2xs"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path
@@ -224,32 +198,35 @@ export default function LoginPage() {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                 />
               </svg>
-              Google
+              <span>Google</span>
             </button>
 
             <button
-              onClick={() => {
-                login('apple.id@icloud.com', 'apple123');
-                navigate('/profile');
-              }}
-              className="flex items-center justify-center gap-2 py-2.5 px-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-xl transition-all cursor-pointer"
+              type="button"
+              onClick={() => setError('Tính năng đăng nhập Apple sẽ kích hoạt khi tích hợp OAuth2 trên Backend.')}
+              className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl border border-slate-200 hover:bg-slate-50 transition-colors text-xs font-semibold text-slate-700 cursor-pointer shadow-2xs"
             >
-              <svg className="w-4 h-4 fill-current text-slate-900" viewBox="0 0 170 170">
-                <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.69-3.04-7.69-7.85-12-14.44-6.19-9.5-11.19-20.76-15-33.78-3.8-13.02-5.71-25.26-5.71-36.72 0-14.03 3.42-25.68 10.26-34.95 6.84-9.27 15.42-13.98 25.75-14.13 4.58 0 9.77 1.25 15.58 3.75 5.8 2.5 9.77 3.75 11.9 3.75 1.9 0 6.03-1.37 12.38-4.11 6.35-2.74 11.83-3.95 16.44-3.63 12.51.64 22.56 5.4 30.15 14.28-10.9 6.64-16.24 15.77-16.02 27.39.22 9.07 3.65 16.79 10.29 23.16 6.63 6.38 14.46 10.02 23.49 10.94-2.24 6.75-4.85 13.57-7.85 20.47zM119.22 33.02c0-7.39 2.65-14.35 7.95-20.88 5.3-6.53 11.75-10.59 19.35-12.14.78 7.6-1.74 14.72-7.56 21.36-5.82 6.64-12.4 10.54-19.74 11.66z" />
+              <svg className="w-4 h-4 fill-current text-slate-900" viewBox="0 0 24 24">
+                <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.85c.67-.82 1.13-1.96.99-3.11-1 .04-2.17.67-2.85 1.48-.6.7-1.12 1.83-.98 2.94 1.11.08 2.19-.53 2.84-1.31z" />
               </svg>
-              Apple ID
+              <span>Apple</span>
             </button>
           </div>
         </div>
 
-        {/* Footer chuyển sang Register */}
-        <p className="text-center text-xs text-slate-500 pt-2">
-          Chưa có tài khoản?{' '}
-          <Link to="/register" className="font-bold text-indigo-600 hover:underline">
-            Đăng ký miễn phí
-          </Link>
-        </p>
-      </div>
+        {/* Footer chuyển sang đăng ký */}
+        <div className="text-center pt-2 relative z-10">
+          <p className="text-xs text-slate-500">
+            Chưa có tài khoản?{' '}
+            <Link
+              to="/register"
+              className="font-bold text-indigo-600 hover:text-indigo-700 hover:underline"
+            >
+              Đăng ký ngay
+            </Link>
+          </p>
+        </div>
+      </motion.div>
     </div>
   );
 }

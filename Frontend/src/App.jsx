@@ -20,6 +20,8 @@ import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import TradeInPage from './pages/TradeInPage';
+import PromotionsPage from './pages/PromotionsPage';
 
 // Admin Pages
 import AdminDashboardPage from './pages/admin/AdminDashboardPage';
@@ -57,6 +59,11 @@ export default function App() {
             <Route element={<CustomerLayout isAiOpen={isAiOpen} setIsAiOpen={setIsAiOpen} />}>
               <Route path="/" element={<HomePage onOpenAiChat={() => setIsAiOpen(true)} />} />
               <Route path="/products" element={<ProductsPage onOpenAiChat={() => setIsAiOpen(true)} />} />
+              <Route path="/category/:category" element={<ProductsPage onOpenAiChat={() => setIsAiOpen(true)} />} />
+              <Route path="/thu-cu-doi-moi" element={<TradeInPage onOpenAiChat={() => setIsAiOpen(true)} />} />
+              <Route path="/trade-in" element={<Navigate to="/thu-cu-doi-moi" replace />} />
+              <Route path="/khuyen-mai" element={<PromotionsPage onOpenAiChat={() => setIsAiOpen(true)} />} />
+              <Route path="/promotions" element={<Navigate to="/khuyen-mai" replace />} />
               <Route path="/products/:id" element={<ProductDetailPage />} />
               <Route path="/product/:id" element={<ProductDetailPage />} />
               <Route path="/cart" element={<CartPage />} />

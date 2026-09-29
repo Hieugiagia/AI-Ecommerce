@@ -1,6 +1,6 @@
 export const STORE_CONFIG = {
-  name: 'Alibaba-Store',
-  brand: 'Alibaba-Store',
+  name: 'Alibaba Store',
+  brand: 'Alibaba Store',
   slogan: 'Hệ thống Bán lẻ Thiết bị Công nghệ Chính hãng',
   hotline: '091234567',
   hotlineFormatted: '0912.345.67',

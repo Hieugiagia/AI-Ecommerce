@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import {
   ShieldCheck,
   Truck,
@@ -8,7 +9,6 @@ import {
   Banknote,
   CheckCircle2,
   ArrowRight,
-  ShoppingBag,
   Sparkles,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
@@ -29,19 +29,23 @@ export default function CheckoutPage() {
     notes: 'Giao giờ hành chính giúp mình nhé.',
   });
 
-  const [paymentMethod, setPaymentMethod] = useState('vietqr'); // 'cod', 'vietqr', 'card', 'momo'
+  const [paymentMethod, setPaymentMethod] = useState('vietqr');
   const [isSuccess, setIsSuccess] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState('');
 
-  // Nếu người dùng chưa đăng nhập -> Hiển thị thông báo yêu cầu đăng nhập trước khi mua
   if (!isAuthenticated) {
     return (
       <div className="max-w-md mx-auto px-4 py-20 text-center space-y-6">
-        <div className="w-18 h-18 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-3xl flex items-center justify-center mx-auto shadow-sm">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          className="w-18 h-18 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-3xl flex items-center justify-center mx-auto shadow-sm"
+        >
           <ShieldCheck className="w-10 h-10" />
-        </div>
+        </motion.div>
         <div className="space-y-2">
-          <span className="text-[11px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+          <span className="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
             Yêu cầu tài khoản
           </span>
           <h2 className="text-2xl font-bold text-slate-900">Vui lòng đăng nhập để thanh toán</h2>
@@ -50,13 +54,14 @@ export default function CheckoutPage() {
           </p>
         </div>
         <div className="pt-2 space-y-3">
-          <button
+          <motion.button
+            whileTap={{ scale: 0.98 }}
             onClick={() => navigate('/login', { state: { from: { pathname: '/checkout' } } })}
-            className="w-full py-3.5 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-sm font-semibold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+            className="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-full text-sm font-semibold transition-all shadow-md shadow-indigo-500/25 flex items-center justify-center gap-2 cursor-pointer"
           >
             <span>Đăng nhập ngay để thanh toán</span>
             <ArrowRight className="w-4 h-4" />
-          </button>
+          </motion.button>
           <div className="flex items-center justify-center gap-4 text-xs">
             <Link to="/register" className="font-semibold text-indigo-600 hover:underline">
               Chưa có tài khoản? Đăng ký
@@ -113,9 +118,14 @@ export default function CheckoutPage() {
   if (isSuccess) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-6">
-        <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto shadow-sm">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+          className="w-20 h-20 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-3xl flex items-center justify-center mx-auto shadow-sm"
+        >
           <CheckCircle2 className="w-12 h-12" />
-        </div>
+        </motion.div>
         <div className="space-y-2">
           <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">
             Đặt hàng thành công!
@@ -133,7 +143,6 @@ export default function CheckoutPage() {
           <div className="p-6 bg-slate-50 border border-slate-200/80 rounded-3xl max-w-sm mx-auto space-y-4 text-center">
             <p className="text-xs font-semibold text-slate-700">Quét mã VietQR để hoàn tất thanh toán</p>
             <div className="p-3 bg-white rounded-2xl border border-slate-200 inline-block shadow-xs">
-              {/* Simulated QR Code */}
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=ALIBABA-${createdOrderId}-${total}`}
                 alt="VietQR"
@@ -152,13 +161,13 @@ export default function CheckoutPage() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
           <Link
             to="/profile"
-            className="w-full sm:w-auto px-6 py-3 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-sm font-semibold transition-all shadow-md"
+            className="w-full sm:w-auto px-6 py-3 bg-slate-900 hover:bg-indigo-600 text-white rounded-full text-sm font-semibold transition-all shadow-md"
           >
             Quản lý đơn hàng
           </Link>
           <Link
             to="/products"
-            className="w-full sm:w-auto px-6 py-3 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-xl text-sm font-semibold transition-all"
+            className="w-full sm:w-auto px-6 py-3 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-full text-sm font-semibold transition-all"
           >
             Tiếp tục mua sắm
           </Link>
@@ -174,7 +183,7 @@ export default function CheckoutPage() {
         <p className="text-xs sm:text-sm text-slate-500">Giỏ hàng của bạn đang trống.</p>
         <Link
           to="/products"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-semibold"
+          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-full text-sm font-semibold shadow-md"
         >
           Khám phá sản phẩm
         </Link>
@@ -185,8 +194,8 @@ export default function CheckoutPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
       <div className="mb-8">
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Thanh toán đơn hàng</h1>
-        <p className="text-xs sm:text-sm text-slate-500">
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Thanh toán đơn hàng</h1>
+        <p className="text-xs sm:text-sm text-slate-500 mt-1">
           Vui lòng kiểm tra lại thông tin nhận hàng và phương thức thanh toán.
         </p>
       </div>
@@ -212,7 +221,7 @@ export default function CheckoutPage() {
                   required
                   value={formData.fullName}
                   onChange={handleChange}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all"
                 />
               </div>
 
@@ -226,7 +235,7 @@ export default function CheckoutPage() {
                   required
                   value={formData.phone}
                   onChange={handleChange}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all"
                 />
               </div>
             </div>
@@ -241,7 +250,7 @@ export default function CheckoutPage() {
                 required
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white"
+                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all"
               />
             </div>
 
@@ -256,7 +265,7 @@ export default function CheckoutPage() {
                   required
                   value={formData.province}
                   onChange={handleChange}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all"
                 />
               </div>
 
@@ -270,7 +279,7 @@ export default function CheckoutPage() {
                   required
                   value={formData.district}
                   onChange={handleChange}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white"
+                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all"
                 />
               </div>
             </div>
@@ -285,7 +294,7 @@ export default function CheckoutPage() {
                 required
                 value={formData.address}
                 onChange={handleChange}
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white"
+                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all"
               />
             </div>
 
@@ -299,7 +308,7 @@ export default function CheckoutPage() {
                 value={formData.notes}
                 onChange={handleChange}
                 placeholder="VD: Giao trước 17h, gọi điện trước khi tới..."
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white"
+                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all"
               />
             </div>
           </div>
@@ -311,12 +320,12 @@ export default function CheckoutPage() {
               2. Phương thức thanh toán
             </h2>
 
-            <div className="space-y-2.5">
+            <div className="space-y-3">
               {/* VietQR */}
               <label
                 className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
                   paymentMethod === 'vietqr'
-                    ? 'border-indigo-600 bg-indigo-50/40 ring-2 ring-indigo-500/20'
+                    ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20 shadow-xs'
                     : 'border-slate-200 hover:border-slate-300 bg-white'
                 }`}
               >
@@ -332,7 +341,7 @@ export default function CheckoutPage() {
                   <div>
                     <p className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
                       Chuyển khoản VietQR tức thì
-                      <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded font-bold">
+                      <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
                         Khuyên dùng
                       </span>
                     </p>
@@ -348,7 +357,7 @@ export default function CheckoutPage() {
               <label
                 className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
                   paymentMethod === 'cod'
-                    ? 'border-indigo-600 bg-indigo-50/40 ring-2 ring-indigo-500/20'
+                    ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20 shadow-xs'
                     : 'border-slate-200 hover:border-slate-300 bg-white'
                 }`}
               >
@@ -377,7 +386,7 @@ export default function CheckoutPage() {
               <label
                 className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
                   paymentMethod === 'momo'
-                    ? 'border-indigo-600 bg-indigo-50/40 ring-2 ring-indigo-500/20'
+                    ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20 shadow-xs'
                     : 'border-slate-200 hover:border-slate-300 bg-white'
                 }`}
               >
@@ -394,7 +403,7 @@ export default function CheckoutPage() {
                     <p className="text-xs sm:text-sm font-bold text-slate-900">
                       Ví MoMo / ZaloPay
                     </p>
-                    <p className="text-[11px] text-slate-500">Thanh toán qua ví điện tử</p>
+                    <p className="text-[11px] text-slate-500">Thanh toán qua ví điện tử liên kết</p>
                   </div>
                 </div>
                 <span className="text-xs font-extrabold text-pink-600">MoMo</span>
@@ -418,7 +427,7 @@ export default function CheckoutPage() {
                   <img
                     src={item.image}
                     alt={item.name}
-                    className="w-12 h-12 rounded-lg object-cover bg-slate-100 shrink-0"
+                    className="w-12 h-12 rounded-xl object-contain bg-slate-50 p-1 border border-slate-100 shrink-0"
                   />
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-slate-900 truncate">{item.name}</p>
@@ -455,17 +464,19 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <button
+            <motion.button
+              whileHover={{ scale: 1.01 }}
+              whileTap={{ scale: 0.98 }}
               type="submit"
-              className="w-full py-4 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-900/10 transition-all cursor-pointer flex items-center justify-center gap-2"
+              className="w-full py-4 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl text-sm font-bold shadow-lg shadow-indigo-500/25 transition-all cursor-pointer flex items-center justify-center gap-2"
             >
               <span>Xác nhận đặt hàng</span>
               <ArrowRight className="w-4 h-4" />
-            </button>
+            </motion.button>
 
             <div className="flex items-center justify-center gap-1.5 text-xs text-slate-400">
               <ShieldCheck className="w-4 h-4 text-emerald-500" />
-              <span>Bảo vệ quyền lợi người mua & Bảo hành chính hãng</span>
+              <span>Bảo vệ quyền lợi người mua &amp; Bảo hành chính hãng</span>
             </div>
           </div>
         </div>

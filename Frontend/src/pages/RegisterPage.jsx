@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Mail, Lock, User, Phone, Eye, EyeOff, Sparkles, ArrowRight, Check } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Mail, Lock, User, Phone, Eye, EyeOff, Sparkles, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export default function RegisterPage() {
@@ -25,9 +26,14 @@ export default function RegisterPage() {
     setFormData({ ...formData, [e.target.name]: value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!formData.fullName.trim() || !formData.email.trim() || !formData.password) {
+      setError('Vui lòng điền đầy đủ các thông tin bắt buộc (*).');
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError('Mật khẩu và xác nhận mật khẩu không khớp.');
@@ -40,42 +46,72 @@ export default function RegisterPage() {
     }
 
     if (!formData.agreeTerms) {
-      setError('Vui lòng đồng ý với Điều khoản dịch vụ.');
+      setError('Vui lòng đồng ý với Điều khoản dịch vụ và Chính sách bảo mật.');
       return;
     }
 
     setLoading(true);
-    setTimeout(() => {
-      register(formData);
+
+    try {
+      const res = await register({
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        password: formData.password,
+      });
+
       setLoading(false);
-      navigate('/profile');
-    }, 600);
+
+      if (!res?.success) {
+        setError(res?.error || 'Đăng ký tài khoản không thành công. Vui lòng thử lại.');
+        return;
+      }
+
+      // Đăng ký thành công, chuyển hướng vào trang tài khoản cá nhân
+      navigate('/profile', { replace: true });
+    } catch (err) {
+      setLoading(false);
+      setError(err.message || 'Đã xảy ra lỗi trong quá trình kết nối đến máy chủ.');
+    }
   };
 
   return (
-    <div className="min-h-[calc(100vh-14rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50/60">
-      <div className="w-full max-w-md space-y-8 bg-white p-8 sm:p-10 border border-slate-200/90 rounded-3xl shadow-xl shadow-slate-200/50">
+    <div className="min-h-[calc(100vh-14rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50/50">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+        className="w-full max-w-md space-y-6 bg-white p-8 sm:p-10 border border-slate-200/80 rounded-3xl shadow-xl shadow-slate-900/5 relative overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 w-44 h-44 bg-violet-50 rounded-full blur-3xl pointer-events-none -mr-10 -mt-10" />
+
         {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100 mb-2">
-            <Sparkles className="w-6 h-6" />
+        <div className="text-center space-y-2 relative z-10">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-50 to-violet-50 text-indigo-600 border border-indigo-200/60 mb-2 shadow-xs">
+            <Sparkles className="w-6 h-6 text-indigo-600" />
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Tạo tài khoản mới
           </h2>
           <p className="text-xs sm:text-sm text-slate-500">
-            Gia nhập thành viên Alibaba-Store để nhận ngập tràn đặc quyền cùng voucher 50k
+            Gia nhập thành viên Alibaba Store để nhận voucher 50k cùng nhiều đặc quyền
           </p>
         </div>
 
+        {/* Thông báo lỗi */}
         {error && (
-          <div className="p-3 bg-rose-50 border border-rose-200 text-rose-600 text-xs rounded-xl font-medium">
-            {error}
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-3.5 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-2xl font-medium flex items-start gap-2.5"
+          >
+            <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+            <div className="leading-relaxed">{error}</div>
+          </motion.div>
         )}
 
         {/* Form đăng ký */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 relative z-10">
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               Họ và tên *
@@ -88,7 +124,7 @@ export default function RegisterPage() {
                 value={formData.fullName}
                 onChange={handleChange}
                 placeholder="Nguyễn Văn A"
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm pl-10 pr-4 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white transition-all"
+                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm pl-10 pr-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all"
               />
               <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             </div>
@@ -105,8 +141,8 @@ export default function RegisterPage() {
                 required
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="tenban@email.com"
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm pl-10 pr-4 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white transition-all"
+                placeholder="name@example.com"
+                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm pl-10 pr-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all"
               />
               <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             </div>
@@ -114,16 +150,17 @@ export default function RegisterPage() {
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Số điện thoại
+              Số điện thoại *
             </label>
             <div className="relative">
               <input
                 type="tel"
                 name="phone"
+                required
                 value={formData.phone}
                 onChange={handleChange}
-                placeholder="0901234567"
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm pl-10 pr-4 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white transition-all"
+                placeholder="0987654321"
+                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm pl-10 pr-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all"
               />
               <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             </div>
@@ -141,13 +178,13 @@ export default function RegisterPage() {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="Tối thiểu 6 ký tự"
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm pl-10 pr-10 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white transition-all"
+                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm pl-10 pr-10 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all"
               />
               <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="p-1 text-slate-400 hover:text-slate-600 absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
@@ -166,14 +203,14 @@ export default function RegisterPage() {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 placeholder="Nhập lại mật khẩu"
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm pl-10 pr-4 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white transition-all"
+                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm pl-10 pr-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all"
               />
               <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             </div>
           </div>
 
           <div className="pt-1">
-            <label className="flex items-start gap-2 cursor-pointer">
+            <label className="flex items-start gap-2 cursor-pointer text-xs text-slate-600">
               <input
                 type="checkbox"
                 name="agreeTerms"
@@ -181,37 +218,44 @@ export default function RegisterPage() {
                 onChange={handleChange}
                 className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
               />
-              <span className="text-[11px] text-slate-600 leading-tight">
-                Tôi đồng ý với <a href="#terms" className="text-indigo-600 underline">Điều khoản sử dụng</a> và{' '}
-                <a href="#privacy" className="text-indigo-600 underline">Chính sách quyền riêng tư</a> của Alibaba-Store.
+              <span>
+                Tôi đồng ý với{' '}
+                <a href="#terms" className="text-indigo-600 hover:underline">
+                  Điều khoản dịch vụ
+                </a>{' '}
+                và{' '}
+                <a href="#privacy" className="text-indigo-600 hover:underline">
+                  Chính sách bảo mật
+                </a>
               </span>
             </label>
           </div>
 
-          <button
+          <motion.button
+            whileHover={{ scale: 1.01 }}
+            whileTap={{ scale: 0.98 }}
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-slate-900 hover:bg-indigo-600 text-white rounded-xl text-sm font-semibold transition-all shadow-md shadow-slate-900/10 cursor-pointer flex items-center justify-center gap-2"
+            className="w-full py-3.5 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-full text-sm font-semibold shadow-md shadow-indigo-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             {loading ? (
-              <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+              <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             ) : (
               <>
                 <span>Đăng ký tài khoản</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
-          </button>
+          </motion.button>
         </form>
 
-        {/* Footer chuyển sang Login */}
-        <p className="text-center text-xs text-slate-500 pt-2">
+        <div className="text-center pt-2 border-t border-slate-100 text-xs text-slate-500">
           Đã có tài khoản?{' '}
           <Link to="/login" className="font-bold text-indigo-600 hover:underline">
             Đăng nhập ngay
           </Link>
-        </p>
-      </div>
+        </div>
+      </motion.div>
     </div>
   );
 }

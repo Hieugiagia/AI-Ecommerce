@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus,
   Search,
@@ -12,6 +13,8 @@ import {
   Package,
   Check,
   CheckCircle2,
+  TrendingUp,
+  Boxes,
 } from 'lucide-react';
 import { PRODUCTS, CATEGORIES } from '../../data/mockData';
 
@@ -134,12 +137,17 @@ export default function AdminProductsPage() {
   const totalStockValue = products.reduce((acc, p) => acc + p.price * (p.stock || 20), 0);
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-6"
+    >
       {/* Low Stock Filter Alert Banner if active */}
       {isLowStockOnly && (
-        <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center justify-between gap-4 text-amber-900 shadow-xs">
+        <div className="p-4 bg-amber-50 border border-amber-200 rounded-3xl flex items-center justify-between gap-4 text-amber-900 shadow-xs">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/20 flex items-center justify-center shrink-0">
               <AlertTriangle className="w-5 h-5 text-amber-600" />
             </div>
             <div>
@@ -153,7 +161,7 @@ export default function AdminProductsPage() {
           </div>
           <button
             onClick={() => setSearchParams({})}
-            className="px-3 py-1.5 bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 rounded-xl text-xs font-semibold shrink-0 cursor-pointer transition-colors"
+            className="px-3.5 py-1.5 bg-white border border-amber-300 text-amber-900 hover:bg-amber-100 rounded-xl text-xs font-semibold shrink-0 cursor-pointer transition-colors"
           >
             ✕ Xem tất cả sản phẩm
           </button>
@@ -161,39 +169,61 @@ export default function AdminProductsPage() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
             Quản lý Sản phẩm & Kho hàng
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500">
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
             Cập nhật giá bán, số lượng tồn kho, thêm và chỉnh sửa danh mục hàng hóa
           </p>
         </div>
 
-        <button
+        <motion.button
+          whileHover={{ scale: 1.02, y: -2 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => setIsAddOpen(true)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs sm:text-sm font-semibold shadow-md transition-all cursor-pointer self-start sm:self-auto"
+          className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-2xl text-xs sm:text-sm font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer self-start sm:self-auto"
         >
           <Plus className="w-4 h-4" />
           <span>Thêm sản phẩm mới</span>
-        </button>
+        </motion.button>
       </div>
 
       {/* Thống kê nhanh kho hàng */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-xs">
-          <span className="text-xs text-slate-500 font-medium">Tổng số mã hàng</span>
-          <p className="text-xl font-bold text-slate-900 mt-1">{products.length} sản phẩm</p>
-        </div>
-        <div className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-xs">
-          <span className="text-xs text-slate-500 font-medium">Sản phẩm sắp hết kho (&le; 15 cái)</span>
-          <p className="text-xl font-bold text-amber-600 mt-1">{lowStockCount} sản phẩm</p>
-        </div>
-        <div className="p-4 bg-white border border-slate-200/80 rounded-2xl shadow-xs">
-          <span className="text-xs text-slate-500 font-medium">Ước tính giá trị tồn kho</span>
-          <p className="text-xl font-bold text-slate-900 mt-1">{formatVND(totalStockValue)}</p>
-        </div>
+        <motion.div whileHover={{ y: -3 }} className="p-5 bg-white border border-slate-200/80 rounded-3xl shadow-xs space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-slate-500 font-medium">Tổng số mã hàng</span>
+            <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <Boxes className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-slate-900">{products.length} sản phẩm</p>
+          <p className="text-[11px] text-emerald-600 font-semibold">Đầy đủ thông tin niêm yết</p>
+        </motion.div>
+
+        <motion.div whileHover={{ y: -3 }} className="p-5 bg-white border border-slate-200/80 rounded-3xl shadow-xs space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-slate-500 font-medium">Sản phẩm sắp hết kho (≤ 15 cái)</span>
+            <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-amber-600">{lowStockCount} sản phẩm</p>
+          <p className="text-[11px] text-amber-700 font-semibold">Cần tạo đề xuất nhập thêm</p>
+        </motion.div>
+
+        <motion.div whileHover={{ y: -3 }} className="p-5 bg-white border border-slate-200/80 rounded-3xl shadow-xs space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-slate-500 font-medium">Ước tính giá trị tồn kho</span>
+            <div className="w-8 h-8 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4" />
+            </div>
+          </div>
+          <p className="text-2xl font-black text-slate-900">{formatVND(totalStockValue)}</p>
+          <p className="text-[11px] text-indigo-600 font-semibold">Theo giá niêm yết hiện tại</p>
+        </motion.div>
       </div>
 
       {/* Bảng công cụ tìm kiếm và lọc */}
@@ -322,263 +352,316 @@ export default function AdminProductsPage() {
       </div>
 
       {/* ===================== MODAL THÊM SẢN PHẨM ===================== */}
-      {isAddOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 sm:p-8 overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <Plus className="w-5 h-5 text-indigo-600" />
-                Thêm sản phẩm mới vào kho
-              </h3>
-              <button
-                onClick={() => setIsAddOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Tên sản phẩm *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="VD: iPad Pro M4 11 inch 256GB"
-                  className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white text-slate-800"
-                />
+      <AnimatePresence>
+        {isAddOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 sm:p-8 overflow-y-auto max-h-[90vh]"
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                    <Plus className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-lg font-black text-slate-900">
+                    Thêm sản phẩm mới vào kho
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setIsAddOpen(false)}
+                  className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 cursor-pointer transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleAddSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Danh mục
-                  </label>
-                  <select
-                    value={formData.category}
-                    onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-3 py-2.5 rounded-xl outline-none focus:border-indigo-500 text-slate-800 cursor-pointer"
-                  >
-                    {CATEGORIES.filter((c) => c.slug !== 'all').map((cat) => (
-                      <option key={cat.id} value={cat.slug}>
-                        {cat.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Thương hiệu
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Tên sản phẩm *
                   </label>
                   <input
                     type="text"
-                    value={formData.brand}
-                    onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                    placeholder="VD: Apple, Sony..."
-                    className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white text-slate-800"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Giá bán (VNĐ) *
-                  </label>
-                  <input
-                    type="number"
                     required
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    placeholder="VD: 24990000"
-                    className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white text-slate-800"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="VD: iPad Pro M4 11 inch 256GB"
+                    className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-600 focus:bg-white text-slate-800 transition-all"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Danh mục
+                    </label>
+                    <select
+                      value={formData.category}
+                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-3.5 py-2.5 rounded-2xl outline-none focus:border-indigo-600 text-slate-800 cursor-pointer transition-all"
+                    >
+                      {CATEGORIES.filter((c) => c.slug !== 'all').map((cat) => (
+                        <option key={cat.id} value={cat.slug}>
+                          {cat.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Thương hiệu
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.brand}
+                      onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                      placeholder="VD: Apple, Sony..."
+                      className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-600 focus:bg-white text-slate-800 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Giá bán (VNĐ) *
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={formData.price}
+                      onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                      placeholder="VD: 24990000"
+                      className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-600 focus:bg-white text-slate-800 transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Số lượng tồn kho
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.stock}
+                      onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
+                      placeholder="VD: 25"
+                      className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-600 focus:bg-white text-slate-800 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Đường dẫn ảnh sản phẩm (URL)
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.image}
+                    onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                    placeholder="https://images.unsplash.com/..."
+                    className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-600 focus:bg-white text-slate-800 transition-all"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Số lượng tồn kho
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Nhãn sản phẩm (Tag)
                   </label>
                   <input
-                    type="number"
-                    value={formData.stock}
-                    onChange={(e) => setFormData({ ...formData, stock: e.target.value })}
-                    placeholder="VD: 25"
-                    className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white text-slate-800"
+                    type="text"
+                    value={formData.tag}
+                    onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
+                    placeholder="VD: Bán chạy, Giảm sốc..."
+                    className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-600 focus:bg-white text-slate-800 transition-all"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Đường dẫn ảnh sản phẩm (URL)
-                </label>
-                <input
-                  type="url"
-                  value={formData.image}
-                  onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                  placeholder="https://images.unsplash.com/..."
-                  className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white text-slate-800"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Nhãn sản phẩm (Tag)
-                </label>
-                <input
-                  type="text"
-                  value={formData.tag}
-                  onChange={(e) => setFormData({ ...formData, tag: e.target.value })}
-                  placeholder="VD: Bán chạy, Giảm sốc..."
-                  className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white text-slate-800"
-                />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setIsAddOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold cursor-pointer"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
-                >
-                  Thêm vào danh sách
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                <div className="pt-3 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddOpen(false)}
+                    className="px-4 py-2.5 rounded-2xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold cursor-pointer transition-colors"
+                  >
+                    Hủy
+                  </button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    type="submit"
+                    className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer"
+                  >
+                    Thêm vào danh sách
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ===================== MODAL CHỈNH SỬA SẢN PHẨM ===================== */}
-      {editingProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 sm:p-8 overflow-y-auto max-h-[90vh]">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
-              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <Edit2 className="w-5 h-5 text-indigo-600" />
-                Chỉnh sửa sản phẩm
-              </h3>
-              <button
-                onClick={() => setEditingProduct(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Tên sản phẩm
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={editingProduct.name}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
-                  className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white text-slate-800"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Giá bán (VNĐ)
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    value={editingProduct.price}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, price: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white text-slate-800"
-                  />
+      <AnimatePresence>
+        {editingProduct && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 sm:p-8 overflow-y-auto max-h-[90vh]"
+            >
+              <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                    <Edit2 className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-lg font-black text-slate-900">
+                    Chỉnh sửa sản phẩm
+                  </h3>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">
-                    Số lượng kho
-                  </label>
-                  <input
-                    type="number"
-                    value={editingProduct.stock || 20}
-                    onChange={(e) => setEditingProduct({ ...editingProduct, stock: e.target.value })}
-                    className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white text-slate-800"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Nhãn (Tag)
-                </label>
-                <input
-                  type="text"
-                  value={editingProduct.tag || ''}
-                  onChange={(e) => setEditingProduct({ ...editingProduct, tag: e.target.value })}
-                  placeholder="VD: Bán chạy, Giảm sốc..."
-                  className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-3.5 py-2.5 rounded-xl outline-none focus:border-indigo-500 focus:bg-white text-slate-800"
-                />
-              </div>
-
-              <div className="pt-2 flex items-center justify-end gap-3">
                 <button
-                  type="button"
                   onClick={() => setEditingProduct(null)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold cursor-pointer"
+                  className="w-8 h-8 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-700 cursor-pointer transition-colors"
                 >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  className="px-6 py-2.5 rounded-xl bg-slate-900 hover:bg-indigo-600 text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
-                >
-                  Lưu thay đổi
+                  <X className="w-4 h-4" />
                 </button>
               </div>
-            </form>
-          </div>
-        </div>
-      )}
+
+              <form onSubmit={handleEditSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Tên sản phẩm
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingProduct.name}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                    className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-600 focus:bg-white text-slate-800 transition-all"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Giá bán (VNĐ)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      value={editingProduct.price}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, price: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-600 focus:bg-white text-slate-800 transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                      Số lượng kho
+                    </label>
+                    <input
+                      type="number"
+                      value={editingProduct.stock || 20}
+                      onChange={(e) => setEditingProduct({ ...editingProduct, stock: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-600 focus:bg-white text-slate-800 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    Nhãn (Tag)
+                  </label>
+                  <input
+                    type="text"
+                    value={editingProduct.tag || ''}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, tag: e.target.value })}
+                    placeholder="VD: Bán chạy, Giảm sốc..."
+                    className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-600 focus:bg-white text-slate-800 transition-all"
+                  />
+                </div>
+
+                <div className="pt-3 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setEditingProduct(null)}
+                    className="px-4 py-2.5 rounded-2xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold cursor-pointer transition-colors"
+                  >
+                    Hủy
+                  </button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    type="submit"
+                    className="px-6 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white text-xs font-bold shadow-md shadow-indigo-500/20 transition-all cursor-pointer"
+                  >
+                    Lưu thay đổi
+                  </motion.button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ===================== MODAL XÁC NHẬN XÓA ===================== */}
-      {deletingProductId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-200 p-6 text-center space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
-              <Trash2 className="w-6 h-6" />
-            </div>
-            <h3 className="text-base font-bold text-slate-900">Xác nhận xóa sản phẩm?</h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Sản phẩm sẽ bị gỡ bỏ khỏi kho hàng và người dùng sẽ không còn thấy sản phẩm này trên cửa hàng.
-            </p>
-            <div className="flex items-center justify-center gap-3 pt-2">
-              <button
-                onClick={() => setDeletingProductId(null)}
-                className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold cursor-pointer"
-              >
-                Hủy bỏ
-              </button>
-              <button
-                onClick={handleDeleteConfirm}
-                className="px-5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold transition-all cursor-pointer shadow-sm"
-              >
-                Xác nhận xóa
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <AnimatePresence>
+        {deletingProductId && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 15 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="relative w-full max-w-sm bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 text-center space-y-4"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <h3 className="text-base font-black text-slate-900">Xác nhận xóa sản phẩm?</h3>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Sản phẩm sẽ bị gỡ bỏ khỏi kho hàng và người dùng sẽ không còn thấy sản phẩm này trên cửa hàng.
+              </p>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <button
+                  onClick={() => setDeletingProductId(null)}
+                  className="px-4 py-2.5 rounded-2xl border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-bold cursor-pointer transition-colors"
+                >
+                  Hủy bỏ
+                </button>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleDeleteConfirm}
+                  className="px-5 py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all cursor-pointer shadow-md shadow-rose-600/20"
+                >
+                  Xác nhận xóa
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
