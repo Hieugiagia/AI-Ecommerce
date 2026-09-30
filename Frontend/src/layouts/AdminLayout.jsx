@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import BrandLogo from '../components/BrandLogo';
+import NotificationDropdown from '../components/NotificationDropdown';
 
 export default function AdminLayout() {
   const { user, logout } = useAuth();
@@ -379,13 +380,7 @@ export default function AdminLayout() {
             </button>
 
             {/* Notification Bell */}
-            <button
-              className="relative p-2 rounded-full bg-white border border-slate-200/80 hover:bg-slate-50 text-slate-600 hover:text-indigo-600 transition-colors shadow-2xs cursor-pointer"
-              title="Thông báo mới"
-            >
-              <Bell className="w-4 h-4" />
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white" />
-            </button>
+            <NotificationDropdown iconClassName="w-4 h-4 text-slate-600" />
 
             <div className="h-5 w-px bg-slate-200" />
 

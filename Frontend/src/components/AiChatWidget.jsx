@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Send, Bot, User, ArrowRight } from 'lucide-react';
 import { PRODUCTS } from '../data/mockData';
 import { Link } from 'react-router-dom';
+import { aiService } from '../services/aiService';
 
 export default function AiChatWidget({ isOpen, onClose }) {
   const [input, setInput] = useState('');
@@ -33,16 +34,39 @@ export default function AiChatWidget({ isOpen, onClose }) {
     }
   }, [messages, isOpen, isTyping]);
 
-  const handleSend = (userText) => {
+  const handleSend = async (userText) => {
     const textToSend = userText || input;
     if (!textToSend.trim()) return;
 
     const userMsg = { role: 'user', text: textToSend };
-    setMessages((prev) => [...prev, userMsg]);
+    const currentMessages = [...messages, userMsg];
+    setMessages(currentMessages);
     if (!userText) setInput('');
     setIsTyping(true);
 
-    // AI intelligent mock matching
+    try {
+      const history = currentMessages.map((m) => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.text }],
+      }));
+      const res = await aiService.chat(textToSend, history);
+      if (res && (res.reply || res.text || res.message)) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            text: res.reply || res.text || res.message,
+            recommendedProducts: res.recommendedProducts || [],
+          },
+        ]);
+        setIsTyping(false);
+        return;
+      }
+    } catch {
+      // Fallback về mock matching nếu Backend chưa bật
+    }
+
+    // AI intelligent fallback matching
     setTimeout(() => {
       let replyText = '';
       let matched = [];

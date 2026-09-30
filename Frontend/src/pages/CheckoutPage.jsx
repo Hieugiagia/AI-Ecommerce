@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { orderService } from '../services/orderService';
+import { paymentService } from '../services/paymentService';
 
 export default function CheckoutPage() {
   const { cart, subtotal, discountAmount, shippingFee, total, clearCart } = useCart();
@@ -84,15 +86,25 @@ export default function CheckoutPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handlePlaceOrder = (e) => {
+  const [placingOrder, setPlacingOrder] = useState(false);
+  const [orderError, setOrderError] = useState('');
+
+  const handlePlaceOrder = async (e) => {
     e.preventDefault();
     if (cart.length === 0) return;
 
-    const orderId = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
-    const newOrder = {
-      id: orderId,
-      date: new Date().toISOString().split('T')[0],
-      items: cart,
+    setPlacingOrder(true);
+    setOrderError('');
+
+    const orderPayload = {
+      items: cart.map((item) => ({
+        productId: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        price: item.unitPrice || item.price,
+        variant: item.variant,
+        color: item.color,
+      })),
       subtotal,
       discountAmount,
       shippingFee,
@@ -106,13 +118,71 @@ export default function CheckoutPage() {
           : paymentMethod === 'momo'
           ? 'Ví điện tử MoMo'
           : 'Thẻ tín dụng / Ghi nợ',
-      status: 'Chờ xác nhận',
     };
 
-    addOrder(newOrder);
-    setCreatedOrderId(orderId);
-    clearCart();
-    setIsSuccess(true);
+    let serverOrderId = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
+
+    try {
+      // 1. Gọi POST /orders/checkout
+      const orderRes = await orderService.checkout(orderPayload);
+      if (orderRes?.orderCode || orderRes?.id || orderRes?.order?.id) {
+        serverOrderId = orderRes.orderCode || orderRes.id || orderRes.order.id;
+      }
+
+      // 2. Nếu thanh toán online, gọi POST /payments/process
+      if (paymentMethod !== 'cod') {
+        try {
+          await paymentService.processPayment({
+            orderCode: serverOrderId,
+            amount: total,
+            paymentMethod,
+          });
+        } catch (payErr) {
+          console.warn('Xử lý thanh toán:', payErr);
+        }
+      }
+
+      const newOrder = {
+        id: serverOrderId,
+        orderCode: serverOrderId,
+        date: new Date().toISOString().split('T')[0],
+        items: cart,
+        subtotal,
+        discountAmount,
+        shippingFee,
+        total,
+        shippingInfo: formData,
+        paymentMethod: orderPayload.paymentMethod,
+        status: 'Chờ xác nhận',
+      };
+
+      addOrder(newOrder);
+      setCreatedOrderId(serverOrderId);
+      clearCart();
+      setIsSuccess(true);
+    } catch (err) {
+      console.error('Lỗi đặt hàng:', err);
+      // Fallback lưu local khi server chưa bật
+      const fallbackOrder = {
+        id: serverOrderId,
+        orderCode: serverOrderId,
+        date: new Date().toISOString().split('T')[0],
+        items: cart,
+        subtotal,
+        discountAmount,
+        shippingFee,
+        total,
+        shippingInfo: formData,
+        paymentMethod: orderPayload.paymentMethod,
+        status: 'Chờ xác nhận',
+      };
+      addOrder(fallbackOrder);
+      setCreatedOrderId(serverOrderId);
+      clearCart();
+      setIsSuccess(true);
+    } finally {
+      setPlacingOrder(false);
+    }
   };
 
   if (isSuccess) {

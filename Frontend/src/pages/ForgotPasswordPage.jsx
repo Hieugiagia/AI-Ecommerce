@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, ShieldCheck, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import { authService } from '../services/authService';
+import BrandLogo from '../components/BrandLogo';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -42,8 +43,8 @@ export default function ForgotPasswordPage() {
 
         {/* Header */}
         <div className="text-center space-y-2 relative z-10">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-50 to-violet-50 text-indigo-600 border border-indigo-200/60 mb-2 shadow-xs">
-            <ShieldCheck className="w-6 h-6 text-indigo-600" />
+          <div className="flex justify-center pb-2">
+            <BrandLogo size="md" />
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Khôi phục mật khẩu

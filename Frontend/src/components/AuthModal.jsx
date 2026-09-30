@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Lock, User, Phone, Eye, EyeOff, Sparkles, ArrowRight, ShieldCheck } from 'lucide-react';
+import { X, Mail, Lock, User, Phone, Eye, EyeOff, ArrowRight, ShieldCheck } from 'lucide-react';
 
 import { useAuth } from '../context/AuthContext';
+import BrandLogo from './BrandLogo';
 
 export default function AuthModal({ isOpen, onClose }) {
   // mode: 'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD'
@@ -96,8 +97,8 @@ export default function AuthModal({ isOpen, onClose }) {
 
             {/* Tiêu đề & Logo */}
             <div className="text-center mb-6 relative z-10">
-              <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-50 to-violet-50 text-indigo-600 border border-indigo-200/60 mb-3 shadow-xs">
-                <Sparkles className="w-6 h-6 text-indigo-600" />
+              <div className="flex justify-center pb-2">
+                <BrandLogo size="md" />
               </div>
               <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
                 {mode === 'LOGIN' && 'Chào mừng trở lại!'}

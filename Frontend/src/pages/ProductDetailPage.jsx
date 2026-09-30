@@ -24,6 +24,7 @@ import { PRODUCTS } from '../data/mockData';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/ProductCard';
+import { productService } from '../services/productService';
 
 export default function ProductDetailPage() {
   const { id } = useParams();
@@ -31,7 +32,26 @@ export default function ProductDetailPage() {
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
 
-  const product = PRODUCTS.find((p) => p.id === Number(id)) || PRODUCTS[0];
+  const [product, setProduct] = useState(
+    () => PRODUCTS.find((p) => String(p.id) === String(id) || p.slug === String(id)) || PRODUCTS[0]
+  );
+
+  useEffect(() => {
+    async function fetchDetail() {
+      try {
+        const data = await productService.getProductById(id);
+        if (data) {
+          setProduct(data);
+          setActiveImage(data.image);
+          if (data.variants?.length) setSelectedVariant(data.variants[0]);
+          if (data.colors?.length) setSelectedColor(data.colors[0]);
+        }
+      } catch (err) {
+        console.warn('Lỗi lấy chi tiết sản phẩm:', err);
+      }
+    }
+    fetchDetail();
+  }, [id]);
 
   const [activeImage, setActiveImage] = useState(product.image);
   const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0] || null);

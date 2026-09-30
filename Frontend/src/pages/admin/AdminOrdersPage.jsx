@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -18,6 +18,7 @@ import {
   Calendar,
   Sparkles,
 } from 'lucide-react';
+import { orderService } from '../../services/orderService';
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState([
@@ -151,7 +152,27 @@ export default function AdminOrdersPage() {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
   };
 
-  const handleStatusChange = (orderId, newStatus) => {
+  useEffect(() => {
+    async function fetchOrders() {
+      try {
+        const res = await orderService.getAllOrders();
+        const serverOrders = Array.isArray(res) ? res : res?.orders;
+        if (serverOrders && serverOrders.length > 0) {
+          setOrders(serverOrders);
+        }
+      } catch (err) {
+        console.warn('Lỗi lấy danh sách đơn từ backend:', err);
+      }
+    }
+    fetchOrders();
+  }, []);
+
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      await orderService.updateOrderStatus(orderId, newStatus);
+    } catch (err) {
+      console.warn('Lỗi cập nhật trạng thái đơn trên server:', err);
+    }
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, status: newStatus } : o))
     );

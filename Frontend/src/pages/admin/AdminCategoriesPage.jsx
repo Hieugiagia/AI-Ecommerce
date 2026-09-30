@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -26,6 +26,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { CATEGORIES, PRODUCTS } from '../../data/mockData';
+import { categoryService } from '../../services/categoryService';
 
 export default function AdminCategoriesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -73,7 +74,28 @@ export default function AdminCategoriesPage() {
     }
   };
 
-  const handleAddSubmit = (e) => {
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const data = await categoryService.getCategories();
+        if (data && data.length > 0) {
+          setCategories(
+            data
+              .filter((c) => c.slug !== 'all')
+              .map((cat) => ({
+                ...cat,
+                description: cat.description || `Các dòng thiết bị ${cat.name} cao cấp chính hãng tích hợp trợ lý AI thông minh.`,
+              }))
+          );
+        }
+      } catch (err) {
+        console.warn('Lỗi lấy danh mục từ server:', err);
+      }
+    }
+    fetchCategories();
+  }, []);
+
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name) return;
 
@@ -84,6 +106,12 @@ export default function AdminCategoriesPage() {
       slug: newSlug,
       description: formData.description || 'Danh mục sản phẩm công nghệ thế hệ mới tích hợp AI.',
     };
+
+    try {
+      await categoryService.createCategory(newCat);
+    } catch (err) {
+      console.warn('Lỗi tạo danh mục trên server:', err);
+    }
 
     setCategories([...categories, newCat]);
     setIsAddOpen(false);

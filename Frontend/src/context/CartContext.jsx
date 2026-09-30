@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { VOUCHERS } from '../data/mockData';
+import { cartService } from '../services/cartService';
 
 const CartContext = createContext();
 
@@ -24,9 +25,35 @@ export function CartProvider({ children }) {
     }
   }, [cart]);
 
+  // Đồng bộ giỏ hàng với server qua GET /cart
+  useEffect(() => {
+    async function syncCartWithServer() {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+      try {
+        const res = await cartService.getCart();
+        const serverItems = Array.isArray(res) ? res : res?.items || res?.cart?.items;
+        if (serverItems && serverItems.length > 0) {
+          setCart(serverItems);
+        }
+      } catch {
+        // Giữ nguyên local cart khi server offline
+      }
+    }
+    syncCartWithServer();
+  }, []);
+
   const addToCart = (product, quantity = 1, variant = null, color = null) => {
     const itemKey = `${product.id}-${variant?.name || 'def'}-${color?.name || 'def'}`;
     const unitPrice = product.price + (variant?.priceDelta || 0);
+
+    // Gọi POST /cart/items lên server
+    cartService.addItem({
+      productId: product.id,
+      quantity,
+      variant: variant?.name || null,
+      color: color?.name || null,
+    }).catch(() => {});
 
     setCart((prev) => {
       const existingIndex = prev.findIndex((item) => item.key === itemKey);
@@ -59,10 +86,24 @@ export function CartProvider({ children }) {
   };
 
   const removeFromCart = (key) => {
+    // Gọi DELETE /cart/items/{itemID}
+    cartService.removeItem(key).catch(() => {});
     setCart((prev) => prev.filter((item) => item.key !== key));
   };
 
   const updateQuantity = (key, delta) => {
+    const currentItem = cart.find((item) => item.key === key);
+    if (currentItem) {
+      const newQty = currentItem.quantity + delta;
+      if (newQty > 0) {
+        // Gọi PATCH /cart/items/{itemID}
+        cartService.updateItemQuantity(key, newQty).catch(() => {});
+      } else {
+        // Gọi DELETE /cart/items/{itemID}
+        cartService.removeItem(key).catch(() => {});
+      }
+    }
+
     setCart((prev) =>
       prev
         .map((item) => {
@@ -77,6 +118,8 @@ export function CartProvider({ children }) {
   };
 
   const clearCart = () => {
+    // Gọi DELETE /cart/clear
+    cartService.clearCart().catch(() => {});
     setCart([]);
     setAppliedVoucher(null);
   };

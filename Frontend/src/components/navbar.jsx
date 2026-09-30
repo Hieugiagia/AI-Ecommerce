@@ -20,6 +20,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import BrandLogo from './BrandLogo';
+import NotificationDropdown from './NotificationDropdown';
 import { STORE_CONFIG } from '../config/storeConfig';
 
 export default function Navbar({ onOpenAiChat }) {
@@ -183,6 +184,9 @@ export default function Navbar({ onOpenAiChat }) {
               </motion.span>
             )}
           </Link>
+
+          {/* Notifications Dropdown */}
+          <NotificationDropdown iconClassName="w-5 h-5 text-slate-700 hover:text-indigo-600 transition-colors" />
 
           {/* User Profile / Auth */}
           {isAuthenticated ? (

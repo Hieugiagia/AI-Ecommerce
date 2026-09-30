@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { PRODUCTS, CATEGORIES } from '../data/mockData';
 import ProductCard from '../components/ProductCard';
+import { productService } from '../services/productService';
 
 export default function ProductsPage({ onOpenAiChat }) {
   const { category: paramCategory } = useParams();
@@ -59,6 +60,27 @@ export default function ProductsPage({ onOpenAiChat }) {
     setSelectedBrand(searchParams.get('brand') || 'all');
     setPriceRange(searchParams.get('price') || 'all');
   }, [paramCategory, searchParams]);
+
+  const [serverProducts, setServerProducts] = useState(PRODUCTS);
+
+  useEffect(() => {
+    async function loadProducts() {
+      try {
+        const res = await productService.getProducts({
+          category: selectedCategory,
+          brand: selectedBrand,
+          search: searchQuery,
+          sort: sortBy,
+        });
+        if (res?.products?.length > 0) {
+          setServerProducts(res.products);
+        }
+      } catch (err) {
+        console.warn('Lỗi lấy danh sách sản phẩm từ backend:', err);
+      }
+    }
+    loadProducts();
+  }, [selectedCategory, selectedBrand, searchQuery, sortBy]);
 
   // Category metadata for banners
   const categoryBanners = {
@@ -128,25 +150,25 @@ export default function ProductsPage({ onOpenAiChat }) {
   };
 
   const allBrands = useMemo(() => {
-    const list = Array.from(new Set(PRODUCTS.map((p) => p.brand).filter(Boolean)));
+    const list = Array.from(new Set(serverProducts.map((p) => p.brand).filter(Boolean)));
     return ['all', ...list];
-  }, []);
+  }, [serverProducts]);
 
   // Brands specific to current selected category
   const categoryBrands = useMemo(() => {
     const pool = selectedCategory === 'all'
-      ? PRODUCTS
-      : PRODUCTS.filter((p) => p.category === selectedCategory);
+      ? serverProducts
+      : serverProducts.filter((p) => p.category === selectedCategory);
     return Array.from(new Set(pool.map((p) => p.brand).filter(Boolean)));
-  }, [selectedCategory]);
+  }, [selectedCategory, serverProducts]);
 
   // Suggested products when filter returns 0 products
   const suggestedProducts = useMemo(() => {
     const pool = selectedCategory !== 'all'
-      ? PRODUCTS.filter((p) => p.category === selectedCategory)
-      : PRODUCTS;
+      ? serverProducts.filter((p) => p.category === selectedCategory)
+      : serverProducts;
     return pool.slice(0, 6);
-  }, [selectedCategory]);
+  }, [selectedCategory, serverProducts]);
 
   const hotTags = [
     { label: 'iPhone 15 Pro Max', badge: 'Hot', query: 'iPhone 15' },
@@ -172,7 +194,7 @@ export default function ProductsPage({ onOpenAiChat }) {
 
   // Lọc sản phẩm
   const filteredProducts = useMemo(() => {
-    return PRODUCTS.filter((product) => {
+    return serverProducts.filter((product) => {
       if (selectedCategory !== 'all' && product.category !== selectedCategory) {
         return false;
       }

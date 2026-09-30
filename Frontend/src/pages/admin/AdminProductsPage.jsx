@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -17,6 +17,7 @@ import {
   Boxes,
 } from 'lucide-react';
 import { PRODUCTS, CATEGORIES } from '../../data/mockData';
+import { productService } from '../../services/productService';
 
 export default function AdminProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -49,8 +50,23 @@ export default function AdminProductsPage() {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
   };
 
-  // Thêm sản phẩm
-  const handleAddSubmit = (e) => {
+  // Load sản phẩm từ Backend qua GET /products
+  useEffect(() => {
+    async function fetchProducts() {
+      try {
+        const res = await productService.getProducts();
+        if (res && res.products && res.products.length > 0) {
+          setProducts(res.products);
+        }
+      } catch (err) {
+        console.warn('Lỗi lấy danh sách sản phẩm từ backend:', err);
+      }
+    }
+    fetchProducts();
+  }, []);
+
+  // Thêm sản phẩm POST /products
+  const handleAddSubmit = async (e) => {
     e.preventDefault();
     if (!formData.name || !formData.price) return;
 
@@ -72,6 +88,12 @@ export default function AdminProductsPage() {
       description: 'Sản phẩm chính hãng với bảo hành đầy đủ tại Alibaba-Store.',
     };
 
+    try {
+      await productService.createProduct(newProd);
+    } catch (err) {
+      console.warn('Lỗi tạo sản phẩm trên server:', err);
+    }
+
     setProducts([newProd, ...products]);
     setIsAddOpen(false);
     setFormData({
@@ -86,10 +108,16 @@ export default function AdminProductsPage() {
     });
   };
 
-  // Lưu chỉnh sửa
-  const handleEditSubmit = (e) => {
+  // Lưu chỉnh sửa PUT /products/{id}
+  const handleEditSubmit = async (e) => {
     e.preventDefault();
     if (!editingProduct) return;
+
+    try {
+      await productService.updateProduct(editingProduct.id, editingProduct);
+    } catch (err) {
+      console.warn('Lỗi cập nhật sản phẩm trên server:', err);
+    }
 
     setProducts((prev) =>
       prev.map((p) =>
@@ -111,9 +139,14 @@ export default function AdminProductsPage() {
     setEditingProduct(null);
   };
 
-  // Xóa sản phẩm
-  const handleDeleteConfirm = () => {
+  // Xóa sản phẩm DELETE /products/{id}
+  const handleDeleteConfirm = async () => {
     if (deletingProductId) {
+      try {
+        await productService.deleteProduct(deletingProductId);
+      } catch (err) {
+        console.warn('Lỗi xóa sản phẩm trên server:', err);
+      }
       setProducts((prev) => prev.filter((p) => p.id !== deletingProductId));
       setDeletingProductId(null);
     }

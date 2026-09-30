@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -39,6 +39,7 @@ import {
   Layers,
 } from 'lucide-react';
 import { PRODUCTS, VOUCHERS } from '../../data/mockData';
+import { adminService } from '../../services/adminService';
 
 export default function AdminDashboardPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -46,6 +47,28 @@ export default function AdminDashboardPage() {
 
   const [hoveredMonth, setHoveredMonth] = useState(null);
   const [timeRange, setTimeRange] = useState('7 ngày qua');
+  const [overviewData, setOverviewData] = useState(null);
+  const [topSellingProducts, setTopSellingProducts] = useState([]);
+
+  useEffect(() => {
+    async function fetchDashboardData() {
+      try {
+        const [overviewRes, topSellingRes] = await Promise.all([
+          adminService.getOverview().catch(() => null),
+          adminService.getTopSelling().catch(() => null),
+        ]);
+        if (overviewRes) setOverviewData(overviewRes);
+        if (topSellingRes && Array.isArray(topSellingRes)) {
+          setTopSellingProducts(topSellingRes);
+        } else if (topSellingRes?.products) {
+          setTopSellingProducts(topSellingRes.products);
+        }
+      } catch (err) {
+        console.warn('Dashboard fetch error:', err);
+      }
+    }
+    fetchDashboardData();
+  }, []);
 
   const formatVND = (price) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);

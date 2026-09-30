@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User, Phone, Eye, EyeOff, Sparkles, ArrowRight, AlertCircle } from 'lucide-react';
+import { Mail, Lock, User, Phone, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import BrandLogo from '../components/BrandLogo';
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -87,8 +88,8 @@ export default function RegisterPage() {
 
         {/* Header */}
         <div className="text-center space-y-2 relative z-10">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-50 to-violet-50 text-indigo-600 border border-indigo-200/60 mb-2 shadow-xs">
-            <Sparkles className="w-6 h-6 text-indigo-600" />
+          <div className="flex justify-center pb-2">
+            <BrandLogo size="md" />
           </div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
             Tạo tài khoản mới

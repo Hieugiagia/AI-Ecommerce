@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Package,
   Clock,
@@ -12,17 +12,84 @@ import {
   Sparkles,
   MapPin,
   Check,
+  X,
+  AlertCircle,
+  Eye,
+  Ban,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
+import { orderService } from '../services/orderService';
 
 export default function OrdersPage() {
   const { user, isAuthenticated } = useAuth();
   const { addToCart } = useCart();
   const [activeFilter, setActiveFilter] = useState('all');
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [cancellingOrder, setCancellingOrder] = useState(null);
+  const [cancelReason, setCancelReason] = useState('Đổi ý / Không còn nhu cầu');
+  const [actionLoading, setActionLoading] = useState(false);
+
+  // Lấy danh sách đơn hàng thực tế qua GET /orders/my-orders
+  useEffect(() => {
+    async function loadOrders() {
+      if (!isAuthenticated) return;
+      setLoading(true);
+      try {
+        const res = await orderService.getMyOrders();
+        const serverOrders = Array.isArray(res) ? res : res?.orders || [];
+        if (serverOrders.length > 0) {
+          setOrders(serverOrders);
+        } else if (user?.orders && user.orders.length > 0) {
+          setOrders(user.orders);
+        } else {
+          setOrders([]);
+        }
+      } catch (err) {
+        console.error('Lỗi lấy danh sách đơn hàng:', err);
+        setOrders(user?.orders || []);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadOrders();
+  }, [isAuthenticated, user]);
 
   const formatVND = (price) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+  };
+
+  // Xem chi tiết đơn hàng GET /orders/{orderCode}
+  const handleViewDetail = async (order) => {
+    const code = order.orderCode || order.id;
+    try {
+      const res = await orderService.getOrderByCode(code);
+      setSelectedOrder(res?.order || res || order);
+    } catch {
+      setSelectedOrder(order);
+    }
+  };
+
+  // Hủy đơn hàng POST /orders/{orderCode}/cancel
+  const handleConfirmCancel = async () => {
+    if (!cancellingOrder) return;
+    const code = cancellingOrder.orderCode || cancellingOrder.id;
+    setActionLoading(true);
+    try {
+      await orderService.cancelOrder(code, cancelReason);
+      setOrders((prev) =>
+        prev.map((o) =>
+          (o.orderCode || o.id) === code ? { ...o, status: 'Đã hủy' } : o
+        )
+      );
+      setCancellingOrder(null);
+    } catch (err) {
+      alert(err.message || 'Không thể hủy đơn hàng.');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   if (!isAuthenticated) {
@@ -51,12 +118,11 @@ export default function OrdersPage() {
     );
   }
 
-  const orders = user.orders || [];
-
   const filteredOrders = orders.filter((o) => {
     if (activeFilter === 'completed') return o.status === 'Đã giao hàng' || o.status === 'Đã hoàn thành';
     if (activeFilter === 'shipping') return o.status === 'Đang giao hàng' || o.status === 'Đang xử lý';
     if (activeFilter === 'pending') return o.status === 'Chờ xác nhận';
+    if (activeFilter === 'cancelled') return o.status === 'Đã hủy';
     return true;
   });
 
@@ -270,16 +336,28 @@ export default function OrdersPage() {
 
                   <div className="flex items-center gap-2 w-full sm:w-auto">
                     <button
-                      onClick={() => alert(`Đang kết nối với CSKH & Trợ lý AI cho đơn #${order.id}`)}
-                      className="flex-1 sm:flex-none px-4 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-full text-xs font-semibold transition-colors cursor-pointer"
+                      onClick={() => handleViewDetail(order)}
+                      className="flex-1 sm:flex-none px-3.5 py-2 border border-slate-200 hover:bg-slate-100 text-slate-700 rounded-full text-xs font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
                     >
-                      Hỗ trợ đơn hàng
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Chi tiết</span>
                     </button>
+
+                    {order.status === 'Chờ xác nhận' && (
+                      <button
+                        onClick={() => setCancellingOrder(order)}
+                        className="flex-1 sm:flex-none px-3.5 py-2 border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-full text-xs font-semibold transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <Ban className="w-3.5 h-3.5" />
+                        <span>Hủy đơn</span>
+                      </button>
+                    )}
+
                     <Link
                       to="/"
                       className="flex-1 sm:flex-none px-4 py-2 bg-slate-900 hover:bg-indigo-600 text-white rounded-full text-xs font-semibold transition-all shadow-xs text-center"
                     >
-                      Mua sắm tiếp
+                      Mua lại
                     </Link>
                   </div>
                 </div>
@@ -288,6 +366,128 @@ export default function OrdersPage() {
           })}
         </div>
       )}
+
+      {/* Modal Chi tiết đơn hàng (GET /orders/{orderCode}) */}
+      <AnimatePresence>
+        {selectedOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl p-6 sm:p-8 max-w-xl w-full shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-lg">
+                    Chi tiết đơn #{selectedOrder.orderCode || selectedOrder.id}
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Trạng thái: <span className="font-bold text-indigo-600">{selectedOrder.status}</span>
+                  </p>
+                </div>
+                <button
+                  onClick={() => setSelectedOrder(null)}
+                  className="p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Danh sách món */}
+              <div className="space-y-3">
+                <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">Sản phẩm</p>
+                {(selectedOrder.items || []).map((item, idx) => (
+                  <div key={idx} className="flex items-center justify-between py-2 border-b border-slate-50 text-xs">
+                    <div className="flex items-center gap-3">
+                      <img src={item.image} alt={item.name} className="w-12 h-12 rounded-xl object-contain bg-slate-50 border border-slate-100 p-1" />
+                      <div>
+                        <p className="font-semibold text-slate-800">{item.name}</p>
+                        <p className="text-slate-400">SL: {item.quantity} {item.variant ? `• ${item.variant}` : ''}</p>
+                      </div>
+                    </div>
+                    <span className="font-bold text-slate-900">{formatVND(item.unitPrice || item.price || 0)}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Thông tin giao hàng */}
+              <div className="bg-slate-50 rounded-2xl p-4 text-xs space-y-1 text-slate-600">
+                <p><span className="font-semibold text-slate-800">Người nhận:</span> {selectedOrder.customerName || selectedOrder.fullName || user.fullName}</p>
+                <p><span className="font-semibold text-slate-800">Số điện thoại:</span> {selectedOrder.phone || user.phone || 'Chưa cung cấp'}</p>
+                <p><span className="font-semibold text-slate-800">Địa chỉ:</span> {selectedOrder.shippingAddress || selectedOrder.address || 'Tại cửa hàng'}</p>
+                <p><span className="font-semibold text-slate-800">Thanh toán:</span> {selectedOrder.paymentMethod || 'COD'}</p>
+                <p className="pt-2 text-sm font-bold text-slate-900">
+                  Tổng tiền: <span className="text-indigo-600">{formatVND(selectedOrder.total || selectedOrder.totalAmount || 0)}</span>
+                </p>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  onClick={() => setSelectedOrder(null)}
+                  className="px-5 py-2.5 bg-slate-900 hover:bg-indigo-600 text-white rounded-full text-xs font-semibold cursor-pointer"
+                >
+                  Đóng
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Hủy đơn hàng (POST /orders/{orderCode}/cancel) */}
+      <AnimatePresence>
+        {cancellingOrder && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-4"
+            >
+              <div className="flex items-center gap-3 text-rose-600">
+                <AlertCircle className="w-6 h-6" />
+                <h3 className="font-bold text-slate-900 text-base">
+                  Xác nhận hủy đơn #{cancellingOrder.orderCode || cancellingOrder.id}?
+                </h3>
+              </div>
+
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Đơn hàng sau khi hủy sẽ không thể khôi phục. Vui lòng chọn lý do hủy:
+              </p>
+
+              <select
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="w-full bg-slate-50 border border-slate-200 text-xs rounded-xl p-3 outline-none focus:border-rose-500"
+              >
+                <option value="Đổi ý / Không còn nhu cầu">Đổi ý / Không còn nhu cầu</option>
+                <option value="Tìm thấy giá rẻ hơn ở nơi khác">Tìm thấy giá rẻ hơn ở nơi khác</option>
+                <option value="Muốn thay đổi địa chỉ nhận hàng">Muốn thay đổi địa chỉ nhận hàng</option>
+                <option value="Muốn đặt lại sản phẩm khác">Muốn đặt lại sản phẩm khác</option>
+              </select>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setCancellingOrder(null)}
+                  className="flex-1 py-2.5 border border-slate-200 text-slate-700 rounded-full text-xs font-semibold hover:bg-slate-50 cursor-pointer"
+                >
+                  Không, giữ lại đơn
+                </button>
+                <button
+                  type="button"
+                  disabled={actionLoading}
+                  onClick={handleConfirmCancel}
+                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full text-xs font-semibold shadow-xs cursor-pointer flex items-center justify-center gap-2"
+                >
+                  {actionLoading ? 'Đang xử lý...' : 'Xác nhận hủy'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
