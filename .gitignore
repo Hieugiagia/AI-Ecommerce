@@ -1,0 +1,29 @@
+# IDEs & System
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+Thumbs.db
+*.log
+
+# Backend (Java / Maven)
+**/target/
+**/.mvn/
+**/mvnw
+**/mvnw.cmd
+*.jar
+*.war
+
+# Frontend (Node / React / Vite)
+**/node_modules/
+**/dist/
+**/build/
+.env
+.env.local
+
+# Docker Local Data
+**/pgdata/
+**/redisdata/
+**/rabbitmq_data/
