@@ -27,18 +27,18 @@ public class User extends BaseEntity {
     @Email(message = "Email không hợp lệ")
     private String email;
 
-    @Column(name = "password_has",nullable = false,length = 255)
+    @Column(name = "password_hash",nullable = false,length = 255)
     @NotBlank(message = "Password không được để trống")
-    @Size(min = 8, max = 20, message = "Password phải từ 8-20 ký tự")
-    private String password_hash;
+
+    private String passwordHash;
 
     @Column(name = "full_name",nullable = false,length = 255)
-    private String full_name;
+    private String fullName;
 
     @Column(name = "phone_number",length = 100)
     @NotBlank(message = "SĐT không được để trống")
     @Size(min = 8, max = 10, message = "SĐT không hợp lệ")
-    private String phone_number;
+    private String phoneNumber;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 30)

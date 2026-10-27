@@ -34,3 +34,11 @@ spring:
     port: 5672
     username: guest
     password: guest
+
+  jwt:
+    # Chuỗi Secret Key mã hóa (tối thiểu 32 ký tự / 256 bits)
+    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+    # Hạn dùng Access Token (15 phút = 900.000 ms)
+    access-expiration: 900000
+    # Hạn dùng Refresh Token (7 ngày = 604.800.000 ms)
+    refresh-expiration: 604800000
