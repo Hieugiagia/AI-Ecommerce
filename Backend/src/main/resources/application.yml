@@ -1,13 +1,13 @@
-
-
 server:
-  port: 8080
+  port: 5000 # Hoặc cổng 5000 / 8080 tùy bạn thiết lập
+  servlet:
+    context-path: /api
 
 spring:
   application:
     name: ai-ecommerce-backend
 
-  # 1. K?t n?i PostgreSQL
+  # 1. Kết nối PostgreSQL
   datasource:
     url: jdbc:postgresql://localhost:5432/ecommerce_db
     username: postgres
@@ -22,23 +22,21 @@ spring:
       hibernate:
         format_sql: true
 
-  # 2. K?t n?i Redis Cache
+  # 2. Kết nối Redis Cache
   data:
     redis:
       host: localhost
       port: 6379
 
-  # 3. K?t n?i RabbitMQ
+  # 3. Kết nối RabbitMQ
   rabbitmq:
     host: localhost
     port: 5672
     username: guest
     password: guest
 
-  jwt:
-    # Chuỗi Secret Key mã hóa (tối thiểu 32 ký tự / 256 bits)
-    secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
-    # Hạn dùng Access Token (15 phút = 900.000 ms)
-    access-expiration: 900000
-    # Hạn dùng Refresh Token (7 ngày = 604.800.000 ms)
-    refresh-expiration: 604800000
+# 4. Cấu hình Chuẩn JWT Security (CẦN BỔ SUNG Đoạn NÀY)
+jwt:
+  secret: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+  expirationMs: 86400000 # Thời gian sống 24 giờ (tính bằng milisec)
+  refreshExpirationMs: 604800000 # Refresh token sống 7 ngày

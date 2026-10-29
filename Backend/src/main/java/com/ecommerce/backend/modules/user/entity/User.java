@@ -2,10 +2,7 @@ package com.ecommerce.backend.modules.user.entity;
 
 import com.ecommerce.backend.common.entity.BaseEntity;
 import jakarta.persistence.*;
-import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.*;
 
 import java.util.ArrayList;
@@ -19,25 +16,22 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class User extends BaseEntity {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "email",nullable = false,unique = true,length = 150)
+    @Column(name = "email", nullable = false, unique = true, length = 150)
     @Email(message = "Email không hợp lệ")
     private String email;
 
-    @Column(name = "password_hash",nullable = false,length = 255)
-    @NotBlank(message = "Password không được để trống")
-
+    @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
-    @Column(name = "full_name",nullable = false,length = 255)
+    @Column(name = "full_name", nullable = false, length = 255)
     private String fullName;
 
-    @Column(name = "phone_number",length = 100)
-    @NotBlank(message = "SĐT không được để trống")
-    @Size(min = 8, max = 10, message = "SĐT không hợp lệ")
+    @Column(name = "phone_number", length = 100)
     private String phoneNumber;
 
     @Enumerated(EnumType.STRING)
@@ -53,5 +47,4 @@ public class User extends BaseEntity {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @Builder.Default
     private List<UserAddress> addresses = new ArrayList<>();
-
 }
