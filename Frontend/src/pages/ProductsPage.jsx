@@ -26,6 +26,7 @@ import {
 import { PRODUCTS, CATEGORIES } from '../data/mockData';
 import ProductCard from '../components/ProductCard';
 import { productService } from '../services/productService';
+import { categoryService } from '../services/categoryService';
 
 export default function ProductsPage({ onOpenAiChat }) {
   const { category: paramCategory } = useParams();
@@ -44,6 +45,9 @@ export default function ProductsPage({ onOpenAiChat }) {
   const [sortBy, setSortBy] = useState('featured');
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
 
+  const [serverProducts, setServerProducts] = useState(PRODUCTS);
+  const [categories, setCategories] = useState(CATEGORIES);
+
   // Auto redirect special categories to their dedicated pages
   useEffect(() => {
     if (rawCategory === 'thu-cu' || rawCategory === 'thu-cu-doi-moi' || rawCategory === 'trade-in') {
@@ -61,8 +65,27 @@ export default function ProductsPage({ onOpenAiChat }) {
     setPriceRange(searchParams.get('price') || 'all');
   }, [paramCategory, searchParams]);
 
-  const [serverProducts, setServerProducts] = useState(PRODUCTS);
+  // Lấy danh mục từ Backend
+  useEffect(() => {
+    async function fetchCategories() {
+      try {
+        const cats = await categoryService.getCategories();
+        if (cats && cats.length > 0) {
+          const hasAll = cats.some((c) => c.slug === 'all');
+          setCategories(
+            hasAll
+              ? cats
+              : [{ id: 'all', name: 'Tất cả sản phẩm', slug: 'all', icon: 'LayoutGrid' }, ...cats]
+          );
+        }
+      } catch (err) {
+        console.warn('Lỗi lấy danh mục từ backend:', err);
+      }
+    }
+    fetchCategories();
+  }, []);
 
+  // Lấy sản phẩm từ Backend
   useEffect(() => {
     async function loadProducts() {
       try {
@@ -72,7 +95,7 @@ export default function ProductsPage({ onOpenAiChat }) {
           search: searchQuery,
           sort: sortBy,
         });
-        if (res?.products?.length > 0) {
+        if (res && Array.isArray(res.products)) {
           setServerProducts(res.products);
         }
       } catch (err) {
@@ -195,8 +218,12 @@ export default function ProductsPage({ onOpenAiChat }) {
   // Lọc sản phẩm
   const filteredProducts = useMemo(() => {
     return serverProducts.filter((product) => {
-      if (selectedCategory !== 'all' && product.category !== selectedCategory) {
-        return false;
+      if (selectedCategory !== 'all') {
+        const matchCat =
+          product.category === selectedCategory ||
+          product.slug === selectedCategory ||
+          String(product.categoryId) === String(selectedCategory);
+        if (!matchCat) return false;
       }
       if (selectedBrand !== 'all' && product.brand !== selectedBrand) {
         return false;
@@ -221,21 +248,22 @@ export default function ProductsPage({ onOpenAiChat }) {
 
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
-        const matchName = product.name.toLowerCase().includes(query);
+        const matchName = product.name?.toLowerCase().includes(query);
         const matchCategory = product.categoryName?.toLowerCase().includes(query);
         const matchBrand = product.brand?.toLowerCase().includes(query);
-        if (!matchName && !matchCategory && !matchBrand) return false;
+        const matchDesc = product.description?.toLowerCase().includes(query);
+        if (!matchName && !matchCategory && !matchBrand && !matchDesc) return false;
       }
 
       return true;
     }).sort((a, b) => {
       if (sortBy === 'price-asc') return a.price - b.price;
       if (sortBy === 'price-desc') return b.price - a.price;
-      if (sortBy === 'rating') return b.rating - a.rating;
+      if (sortBy === 'rating') return (b.rating || 5) - (a.rating || 5);
       if (sortBy === 'sold') return (b.sold || 0) - (a.sold || 0);
       return 0;
     });
-  }, [selectedCategory, selectedBrand, priceRange, searchQuery, sortBy]);
+  }, [serverProducts, selectedCategory, selectedBrand, priceRange, searchQuery, sortBy]);
 
   const handleSelectCategory = (catSlug) => {
     setSelectedCategory(catSlug);
@@ -304,13 +332,15 @@ export default function ProductsPage({ onOpenAiChat }) {
         </div>
 
         <div className="space-y-1.5">
-          {CATEGORIES.map((cat) => {
+          {categories.map((cat) => {
             const Icon = getCategoryIcon(cat.slug);
             const isSelected = selectedCategory === cat.slug;
             const count =
               cat.slug === 'all'
-                ? PRODUCTS.length
-                : PRODUCTS.filter((p) => p.category === cat.slug).length;
+                ? serverProducts.length
+                : serverProducts.filter(
+                    (p) => p.category === cat.slug || String(p.categoryId) === String(cat.id)
+                  ).length;
 
             return (
               <motion.button
@@ -490,7 +520,7 @@ export default function ProductsPage({ onOpenAiChat }) {
         <span className="text-slate-900 font-bold">
           {selectedCategory === 'all'
             ? 'Tất cả sản phẩm'
-            : CATEGORIES.find((c) => c.slug === selectedCategory)?.name || 'Sản phẩm'}
+            : categories.find((c) => c.slug === selectedCategory || String(c.id) === String(selectedCategory))?.name || 'Sản phẩm'}
         </span>
         {selectedBrand !== 'all' && (
           <>
@@ -646,7 +676,7 @@ export default function ProductsPage({ onOpenAiChat }) {
 
               {selectedCategory !== 'all' && (
                 <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                  {CATEGORIES.find((c) => c.slug === selectedCategory)?.name}
+                  {categories.find((c) => c.slug === selectedCategory || String(c.id) === String(selectedCategory))?.name || selectedCategory}
                   <button
                     onClick={() => handleSelectCategory('all')}
                     className="hover:text-indigo-900 cursor-pointer"

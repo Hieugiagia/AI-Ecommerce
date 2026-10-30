@@ -20,9 +20,19 @@ export default function ProductCard({ product, isFlashSale = false, soldCount = 
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
   };
 
-  const discountPercent = product.originalPrice
-    ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
+  const price = typeof product.price === 'string' ? parseFloat(product.price) : Number(product.price) || 0;
+  const originalPrice = product.originalPrice
+    ? (typeof product.originalPrice === 'string' ? parseFloat(product.originalPrice) : Number(product.originalPrice))
     : 0;
+  const discountPercent = originalPrice > price
+    ? Math.round(((originalPrice - price) / originalPrice) * 100)
+    : 0;
+
+  const productImage =
+    product.thumbnailUrl ||
+    product.image ||
+    product.thumbnail_url ||
+    'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500';
 
   return (
     <motion.div
@@ -30,11 +40,11 @@ export default function ProductCard({ product, isFlashSale = false, soldCount = 
       transition={{ type: 'spring', stiffness: 350, damping: 25 }}
       className="group relative bg-white border border-slate-200/80 rounded-2xl overflow-hidden hover:border-indigo-300/80 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 flex flex-col justify-between"
     >
-      <Link to={`/product/${product.id}`} className="block flex-1 flex flex-col">
+      <Link to={`/product/${product.slug || product.id}`} className="block flex-1 flex flex-col">
         {/* Ảnh sản phẩm */}
         <div className="relative aspect-square overflow-hidden bg-slate-50/70 p-4 flex items-center justify-center">
           <img
-            src={product.image}
+            src={productImage}
             alt={product.name}
             className="w-full h-full object-contain group-hover:scale-106 transition-transform duration-500 ease-out"
             loading="lazy"

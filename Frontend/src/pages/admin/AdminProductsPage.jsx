@@ -18,12 +18,14 @@ import {
 } from 'lucide-react';
 import { PRODUCTS, CATEGORIES } from '../../data/mockData';
 import { productService } from '../../services/productService';
+import { categoryService } from '../../services/categoryService';
 
 export default function AdminProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const isLowStockOnly = searchParams.get('tab') === 'low_stock';
 
   const [products, setProducts] = useState(PRODUCTS);
+  const [categories, setCategories] = useState(CATEGORIES);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
 
@@ -50,19 +52,25 @@ export default function AdminProductsPage() {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
   };
 
-  // Load sản phẩm từ Backend qua GET /products
+  // Load sản phẩm và danh mục từ Backend
   useEffect(() => {
-    async function fetchProducts() {
+    async function fetchData() {
       try {
-        const res = await productService.getProducts();
-        if (res && res.products && res.products.length > 0) {
-          setProducts(res.products);
+        const [prodRes, catRes] = await Promise.all([
+          productService.getProducts(),
+          categoryService.getCategories(),
+        ]);
+        if (prodRes && Array.isArray(prodRes.products) && prodRes.products.length > 0) {
+          setProducts(prodRes.products);
+        }
+        if (catRes && catRes.length > 0) {
+          setCategories(catRes);
         }
       } catch (err) {
-        console.warn('Lỗi lấy danh sách sản phẩm từ backend:', err);
+        console.warn('Lỗi lấy dữ liệu từ backend:', err);
       }
     }
-    fetchProducts();
+    fetchData();
   }, []);
 
   // Thêm sản phẩm POST /products
@@ -75,7 +83,7 @@ export default function AdminProductsPage() {
       name: formData.name,
       slug: formData.name.toLowerCase().replace(/\s+/g, '-'),
       category: formData.category,
-      categoryName: CATEGORIES.find((c) => c.slug === formData.category)?.name || 'Khác',
+      categoryName: categories.find((c) => c.slug === formData.category)?.name || 'Khác',
       brand: formData.brand,
       price: Number(formData.price),
       originalPrice: Number(formData.originalPrice || formData.price),
@@ -84,6 +92,8 @@ export default function AdminProductsPage() {
       rating: 5.0,
       tag: formData.tag || 'Mới',
       image: formData.image,
+      thumbnailUrl: formData.image,
+      status: 'PUBLISHED',
       summary: 'Sản phẩm mới vừa được cập nhật vào kho hàng hệ thống.',
       description: 'Sản phẩm chính hãng với bảo hành đầy đủ tại Alibaba-Store.',
     };
@@ -131,7 +141,7 @@ export default function AdminProductsPage() {
               stock: Number(editingProduct.stock),
               tag: editingProduct.tag,
               category: editingProduct.category,
-              categoryName: CATEGORIES.find((c) => c.slug === editingProduct.category)?.name || p.categoryName,
+              categoryName: categories.find((c) => c.slug === editingProduct.category)?.name || p.categoryName,
             }
           : p
       )
@@ -280,7 +290,7 @@ export default function AdminProductsPage() {
               className="bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-700 py-2.5 px-3 rounded-xl outline-none focus:border-indigo-500 cursor-pointer"
             >
               <option value="all">Tất cả danh mục</option>
-              {CATEGORIES.filter((c) => c.slug !== 'all').map((cat) => (
+              {categories.filter((c) => c.slug !== 'all').map((cat) => (
                 <option key={cat.id} value={cat.slug}>
                   {cat.name}
                 </option>
@@ -308,7 +318,7 @@ export default function AdminProductsPage() {
                   <td className="py-3.5 px-3">
                     <div className="flex items-center gap-3">
                       <img
-                        src={p.image}
+                        src={p.thumbnailUrl || p.image || p.thumbnail_url}
                         alt={p.name}
                         className="w-12 h-12 rounded-xl object-cover bg-slate-100 shrink-0"
                       />
@@ -442,7 +452,7 @@ export default function AdminProductsPage() {
                       onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                       className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm px-3.5 py-2.5 rounded-2xl outline-none focus:border-indigo-600 text-slate-800 cursor-pointer transition-all"
                     >
-                      {CATEGORIES.filter((c) => c.slug !== 'all').map((cat) => (
+                      {categories.filter((c) => c.slug !== 'all').map((cat) => (
                         <option key={cat.id} value={cat.slug}>
                           {cat.name}
                         </option>

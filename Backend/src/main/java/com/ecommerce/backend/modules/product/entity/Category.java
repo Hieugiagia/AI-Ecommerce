@@ -17,7 +17,7 @@ public class Category extends BaseEntity {
     private Long id;
 
     @Column(name = "parent_id")
-    private long parentId;
+    private Long parentId;
 
     @Column(name = "name", nullable = false, length = 100)
     private String name;

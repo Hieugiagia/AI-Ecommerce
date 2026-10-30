@@ -28,7 +28,7 @@ export function CartProvider({ children }) {
   // Đồng bộ giỏ hàng với server qua GET /cart
   useEffect(() => {
     async function syncCartWithServer() {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('auth_token') || localStorage.getItem('accessToken');
       if (!token) return;
       try {
         const res = await cartService.getCart();
@@ -45,7 +45,7 @@ export function CartProvider({ children }) {
 
   const addToCart = (product, quantity = 1, variant = null, color = null) => {
     const itemKey = `${product.id}-${variant?.name || 'def'}-${color?.name || 'def'}`;
-    const unitPrice = product.price + (variant?.priceDelta || 0);
+    const unitPrice = Number(product.price) + (variant?.priceDelta || 0);
 
     // Gọi POST /cart/items lên server
     cartService.addItem({
@@ -72,9 +72,10 @@ export function CartProvider({ children }) {
           id: product.id,
           name: product.name,
           slug: product.slug,
-          image: product.image,
+          image: product.thumbnailUrl || product.image || product.thumbnail_url,
+          thumbnailUrl: product.thumbnailUrl || product.image || product.thumbnail_url,
           unitPrice,
-          originalPrice: product.originalPrice,
+          originalPrice: product.originalPrice || product.price,
           quantity,
           variant: variant ? variant.name : null,
           color: color ? color.name : null,

@@ -36,15 +36,41 @@ export default function ProductDetailPage() {
     () => PRODUCTS.find((p) => String(p.id) === String(id) || p.slug === String(id)) || PRODUCTS[0]
   );
 
+  const [activeImage, setActiveImage] = useState(product?.thumbnailUrl || product?.image || '');
+  const [relatedProducts, setRelatedProducts] = useState(() =>
+    PRODUCTS.filter((p) => p.category === product.category && p.id !== product.id).slice(0, 4)
+  );
+
   useEffect(() => {
     async function fetchDetail() {
       try {
         const data = await productService.getProductById(id);
         if (data) {
           setProduct(data);
-          setActiveImage(data.image);
+          setActiveImage(data.thumbnailUrl || data.image || data.thumbnail_url || '');
           if (data.variants?.length) setSelectedVariant(data.variants[0]);
           if (data.colors?.length) setSelectedColor(data.colors[0]);
+
+          // Lấy sản phẩm tương quan từ Backend
+          try {
+            const relRes = await productService.getProducts({
+              category: data.category || data.categoryId || data.slug,
+              limit: 5,
+            });
+            const list = relRes?.products || (Array.isArray(relRes) ? relRes : []);
+            const filtered = list.filter((p) => String(p.id) !== String(data.id)).slice(0, 4);
+            if (filtered.length > 0) {
+              setRelatedProducts(filtered);
+            } else {
+              setRelatedProducts(
+                PRODUCTS.filter((p) => p.category === data.category && String(p.id) !== String(data.id)).slice(0, 4)
+              );
+            }
+          } catch {
+            setRelatedProducts(
+              PRODUCTS.filter((p) => p.category === data.category && String(p.id) !== String(data.id)).slice(0, 4)
+            );
+          }
         }
       } catch (err) {
         console.warn('Lỗi lấy chi tiết sản phẩm:', err);
@@ -52,8 +78,6 @@ export default function ProductDetailPage() {
     }
     fetchDetail();
   }, [id]);
-
-  const [activeImage, setActiveImage] = useState(product.image);
   const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0] || null);
   const [selectedColor, setSelectedColor] = useState(product.colors?.[0] || null);
   const [quantity, setQuantity] = useState(1);
@@ -144,9 +168,6 @@ export default function ProductDetailPage() {
     }
   };
 
-  const relatedProducts = PRODUCTS.filter(
-    (p) => p.category === product.category && p.id !== product.id
-  ).slice(0, 4);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-8 antialiased text-slate-800">
