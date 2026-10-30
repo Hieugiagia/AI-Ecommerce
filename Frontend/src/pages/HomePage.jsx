@@ -21,12 +21,43 @@ import {
 } from 'lucide-react';
 import { PRODUCTS, CATEGORIES } from '../data/mockData';
 import ProductCard from '../components/ProductCard';
+import { productService } from '../services/productService';
+import { categoryService } from '../services/categoryService';
 
 export default function HomePage({ onOpenAiChat }) {
+  const [products, setProducts] = useState(PRODUCTS);
+  const [categories, setCategories] = useState(CATEGORIES);
   const [currentSlide, setCurrentSlide] = useState(0);
   const [flashSaleCategory, setFlashSaleCategory] = useState('all');
   const [timeLeft, setTimeLeft] = useState({ hours: 2, minutes: 45, seconds: 18 });
   const [hoveredCategory, setHoveredCategory] = useState(null);
+
+  // Tải danh sách sản phẩm và danh mục thực tế từ Backend API
+  useEffect(() => {
+    let isMounted = true;
+    async function loadBackendData() {
+      try {
+        const [prodRes, catRes] = await Promise.all([
+          productService.getProducts({ limit: 20 }),
+          categoryService.getCategories(),
+        ]);
+        if (isMounted) {
+          if (prodRes?.products && prodRes.products.length > 0) {
+            setProducts(prodRes.products);
+          }
+          if (catRes && catRes.length > 0) {
+            setCategories(catRes);
+          }
+        }
+      } catch (err) {
+        console.warn('Lỗi lấy dữ liệu trang chủ từ backend:', err);
+      }
+    }
+    loadBackendData();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Hero carousel banners with MotionSites SaaS look
   const heroSlides = [
@@ -90,9 +121,9 @@ export default function HomePage({ onOpenAiChat }) {
   }, []);
 
   // Filter flash sale products
-  const flashSaleProducts = PRODUCTS.filter((p) => {
+  const flashSaleProducts = products.filter((p) => {
     if (flashSaleCategory === 'all') return true;
-    return p.category === flashSaleCategory;
+    return p.category === flashSaleCategory || String(p.categoryId) === String(flashSaleCategory);
   }).slice(0, 4);
 
   // Mega Menu Flyout Data matching Image 2 reference (CellphoneS style)
@@ -1181,9 +1212,9 @@ export default function HomePage({ onOpenAiChat }) {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          {CATEGORIES.filter((c) => c.slug !== 'all').map((cat) => (
+          {categories.filter((c) => c.slug !== 'all').map((cat) => (
             <motion.div
-              key={cat.id}
+              key={cat.id || cat.slug}
               whileHover={{ y: -6, scale: 1.02 }}
               transition={{ type: 'spring', stiffness: 350, damping: 25 }}
             >
@@ -1301,8 +1332,8 @@ export default function HomePage({ onOpenAiChat }) {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-          {PRODUCTS.slice(0, 8).map((product) => (
-            <ProductCard key={product.id} product={product} />
+          {products.slice(0, 8).map((product) => (
+            <ProductCard key={product.id || product.slug} product={product} />
           ))}
         </div>
       </motion.section>

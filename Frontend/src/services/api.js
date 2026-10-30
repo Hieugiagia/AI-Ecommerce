@@ -31,7 +31,7 @@ export async function apiRequest(endpoint, options = {}, isRetry = false) {
     ? endpoint
     : `${API_BASE_URL}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
 
-  const token = localStorage.getItem('auth_token');
+  const token = localStorage.getItem('auth_token') || localStorage.getItem('accessToken');
 
   const headers = {
     'Content-Type': 'application/json',
@@ -71,9 +71,10 @@ export async function apiRequest(endpoint, options = {}, isRetry = false) {
 
             if (refreshRes.ok) {
               const refreshData = await refreshRes.json();
-              const newToken = refreshData?.token || refreshData?.accessToken;
+              const newToken = refreshData?.accessToken || refreshData?.token;
               if (newToken) {
                 localStorage.setItem('auth_token', newToken);
+                localStorage.setItem('accessToken', newToken);
                 if (refreshData?.refreshToken) {
                   localStorage.setItem('refresh_token', refreshData.refreshToken);
                 }
@@ -87,6 +88,7 @@ export async function apiRequest(endpoint, options = {}, isRetry = false) {
             processQueue(refreshErr, null);
             isRefreshing = false;
             localStorage.removeItem('auth_token');
+            localStorage.removeItem('accessToken');
             localStorage.removeItem('refresh_token');
             localStorage.removeItem('ai_ecommerce_user');
             window.dispatchEvent(new Event('auth:unauthorized'));

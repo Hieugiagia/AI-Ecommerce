@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Mail, Lock, User, Phone, Eye, EyeOff, ArrowRight, ShieldCheck } from 'lucide-react';
+import { X, Mail, Lock, User, Phone, Eye, EyeOff, ArrowRight, ShieldCheck, AlertCircle, Loader2 } from 'lucide-react';
 
-import { useAuth } from '../context/AuthContext';
+import authService from '../services/authService';
 import BrandLogo from './BrandLogo';
 
 export default function AuthModal({ isOpen, onClose }) {
@@ -16,10 +16,8 @@ export default function AuthModal({ isOpen, onClose }) {
     phoneNumber: '',
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [error, setError] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const { login, register } = useAuth();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -27,39 +25,50 @@ export default function AuthModal({ isOpen, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-    if (mode === 'FORGOT_PASSWORD') {
-      setIsSubmitted(true);
-      return;
-    }
-    
+    setErrorMessage('');
     setLoading(true);
+
     try {
-      if (mode === 'LOGIN') {
-        const res = await login(formData.email, formData.password);
-        if (!res?.success) {
-          setError(res?.error || 'Đăng nhập không thành công.');
-          setLoading(false);
-          return;
-        }
-      } else if (mode === 'REGISTER') {
-        const res = await register({
+      if (mode === 'REGISTER') {
+        // 🟢 GỌI API ĐĂNG KÝ THẬT VỀ BACKEND CỔNG 5000
+        const response = await authService.register({
           fullName: formData.fullName,
           email: formData.email,
           phone: formData.phoneNumber,
           password: formData.password,
         });
-        if (!res?.success) {
-          setError(res?.error || 'Đăng ký không thành công.');
-          setLoading(false);
-          return;
+
+        alert(response?.message || 'Đăng ký tài khoản thành công!');
+        setMode('LOGIN'); // Chuyển sang màn hình Đăng nhập sau khi đăng ký
+
+      } else if (mode === 'LOGIN') {
+        // 🟢 GỌI API ĐĂNG NHẬP THẬT
+        const response = await authService.login(formData.email, formData.password);
+
+        const token = response?.accessToken || response?.token;
+        if (token) {
+          localStorage.setItem('auth_token', token);
+          localStorage.setItem('accessToken', token);
+          if (response?.refreshToken) {
+            localStorage.setItem('refresh_token', response.refreshToken);
+          }
+          if (response?.user) {
+            localStorage.setItem('ai_ecommerce_user', JSON.stringify(response.user));
+          }
         }
+        alert('Đăng nhập thành công!');
+        onClose();
+        window.location.reload();
+
+      } else if (mode === 'FORGOT_PASSWORD') {
+        await authService.forgotPassword(formData.email);
+        setIsSubmitted(true);
       }
+    } catch (error) {
+      console.error('Lỗi Auth:', error);
+      setErrorMessage(error?.data?.message || error?.message || 'Thao tác thất bại, vui lòng thử lại!');
+    } finally {
       setLoading(false);
-      onClose();
-    } catch (err) {
-      setLoading(false);
-      setError(err.message || 'Lỗi kết nối.');
     }
   };
 
@@ -149,6 +158,18 @@ export default function AuthModal({ isOpen, onClose }) {
                   onSubmit={handleSubmit}
                   className="space-y-3.5 relative z-10"
                 >
+                  {/* Báo lỗi trực quan nếu có */}
+                  {errorMessage && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-2xl flex items-center gap-2"
+                    >
+                      <AlertCircle className="w-4 h-4 text-rose-500 shrink-0" />
+                      <span>{errorMessage}</span>
+                    </motion.div>
+                  )}
+
                   {/* Họ tên (Chỉ hiện khi Đăng ký) */}
                   {mode === 'REGISTER' && (
                     <div>
@@ -244,14 +265,21 @@ export default function AuthModal({ isOpen, onClose }) {
                   <motion.button
                     whileTap={{ scale: 0.98 }}
                     type="submit"
-                    className="w-full py-3 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl text-xs sm:text-sm font-semibold shadow-md shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer mt-4"
+                    disabled={loading}
+                    className="w-full py-3 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-60 disabled:cursor-not-allowed text-white rounded-2xl text-xs sm:text-sm font-semibold shadow-md shadow-indigo-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer mt-4"
                   >
-                    <span>
-                      {mode === 'LOGIN' && 'Đăng Nhập'}
-                      {mode === 'REGISTER' && 'Đăng Ký Tài Khoản'}
-                      {mode === 'FORGOT_PASSWORD' && 'Gửi mã khôi phục'}
-                    </span>
-                    <ArrowRight className="w-4 h-4" />
+                    {loading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <span>
+                          {mode === 'LOGIN' && 'Đăng Nhập'}
+                          {mode === 'REGISTER' && 'Đăng Ký Tài Khoản'}
+                          {mode === 'FORGOT_PASSWORD' && 'Gửi mã khôi phục'}
+                        </span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
                   </motion.button>
                 </motion.form>
               )}

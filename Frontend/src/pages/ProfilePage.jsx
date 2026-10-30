@@ -20,7 +20,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 
 export default function ProfilePage() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout } = useAuth();
   const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'info'
@@ -88,7 +88,7 @@ export default function ProfilePage() {
           <div className="space-y-1">
             <div className="flex items-center justify-center sm:justify-start gap-2">
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900">{user.fullName}</h1>
-              {user.role === 'admin' ? (
+              {isAdmin ? (
                 <span className="text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
                   🛡️ Quản trị viên
                 </span>
@@ -100,7 +100,7 @@ export default function ProfilePage() {
             </div>
             <p className="text-xs text-slate-500">{user.email}</p>
             <p className="text-xs text-slate-400">
-              {user.role === 'admin'
+              {isAdmin
                 ? 'Toàn quyền quản trị hệ thống và cấu hình sản phẩm'
                 : 'Đã tích lũy 1.250 điểm thành viên Alibaba Club'}
             </p>
@@ -108,7 +108,7 @@ export default function ProfilePage() {
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto relative z-10">
-          {user.role === 'admin' && (
+          {isAdmin && (
             <Link
               to="/admin/dashboard"
               className="flex-1 sm:flex-none px-4 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-full text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5"

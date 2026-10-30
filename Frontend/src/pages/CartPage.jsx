@@ -145,11 +145,11 @@ export default function CartPage() {
                 >
                   {/* Ảnh */}
                   <Link
-                    to={`/product/${item.id}`}
+                    to={`/product/${item.slug || item.id}`}
                     className="w-20 h-20 rounded-2xl overflow-hidden bg-slate-50 p-2 shrink-0 border border-slate-100"
                   >
                     <img
-                      src={item.image}
+                      src={item.thumbnailUrl || item.image}
                       alt={item.name}
                       className="w-full h-full object-contain"
                     />
@@ -158,7 +158,7 @@ export default function CartPage() {
                   {/* Thông tin */}
                   <div className="flex-1 min-w-0 text-center sm:text-left">
                     <Link
-                      to={`/product/${item.id}`}
+                      to={`/product/${item.slug || item.id}`}
                       className="font-semibold text-sm text-slate-900 hover:text-indigo-600 line-clamp-1 transition-colors"
                     >
                       {item.name}

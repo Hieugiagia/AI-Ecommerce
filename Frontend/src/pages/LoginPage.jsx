@@ -39,7 +39,7 @@ export default function LoginPage() {
       }
 
       // Điều hướng dựa theo quyền người dùng trả về từ Backend
-      if (res.role === 'admin') {
+      if (res.role === 'admin' || res.role === 'ROLE_ADMIN' || res.isAdmin) {
         navigate('/admin/dashboard', { replace: true });
       } else {
         const target = redirectPath.startsWith('/admin') ? '/profile' : redirectPath;

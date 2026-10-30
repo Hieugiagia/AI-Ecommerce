@@ -35,19 +35,29 @@ export function AuthProvider({ children }) {
     async function verifySession() {
       if (!token) return;
       try {
+        setLoading(true);
         const response = await authService.getProfile();
-        if (response?.user) {
-          setUser(response.user);
+        // Backend trả về { user: {...} } hoặc trực tiếp object user
+        const profileUser = response?.user || response;
+        if (profileUser?.id || profileUser?.email) {
+          setUser(profileUser);
         }
       } catch (err) {
-        // Nếu token hết hạn (401), tự động dọn dẹp
-        if (err.status === 401) {
+        // 401 = token hết hạn → logout
+        if (err?.status === 401) {
           logout();
         }
+        // 500 = lỗi server → giữ nguyên user từ localStorage, không logout
+        // (tránh logout nhầm khi BE tạm lỗi)
+        console.warn('verifySession error:', err?.status, err?.message);
+      } finally {
+        setLoading(false);
       }
     }
     verifySession();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
 
   /**
    * Đăng nhập người dùng qua Backend API
@@ -59,21 +69,30 @@ export function AuthProvider({ children }) {
     try {
       const response = await authService.login(email, password);
 
-      const authToken = response?.token || 'mock_jwt_token_' + Date.now();
+      const authToken = response?.accessToken || response?.token || 'mock_jwt_token_' + Date.now();
       const authUser = response?.user || {
         id: response?.id || 'usr_' + Date.now(),
         fullName: response?.fullName || email.split('@')[0],
         email: email.trim().toLowerCase(),
-        role: response?.role || (email.toLowerCase().includes('admin') ? 'admin' : 'user'),
+        role: response?.role || (email.toLowerCase().includes('admin') ? 'ROLE_ADMIN' : 'ROLE_USER'),
       };
+
+      if (response?.refreshToken) {
+        localStorage.setItem('refresh_token', response.refreshToken);
+      }
+      localStorage.setItem('accessToken', authToken);
+      localStorage.setItem('auth_token', authToken);
 
       setToken(authToken);
       setUser(authUser);
       setLoading(false);
 
+      const isAdmin = authUser.role === 'admin' || authUser.role === 'ROLE_ADMIN';
+
       return {
         success: true,
         role: authUser.role,
+        isAdmin,
         user: authUser,
       };
     } catch (err) {
@@ -104,14 +123,20 @@ export function AuthProvider({ children }) {
     try {
       const response = await authService.register(userData);
 
-      const authToken = response?.token || 'mock_jwt_token_' + Date.now();
+      const authToken = response?.accessToken || response?.token || 'mock_jwt_token_' + Date.now();
       const authUser = response?.user || {
         id: response?.id || 'usr_' + Date.now(),
         fullName: userData.fullName,
         email: userData.email.trim().toLowerCase(),
         phone: userData.phone || '',
-        role: 'user',
+        role: response?.role || 'ROLE_USER',
       };
+
+      if (response?.refreshToken) {
+        localStorage.setItem('refresh_token', response.refreshToken);
+      }
+      localStorage.setItem('accessToken', authToken);
+      localStorage.setItem('auth_token', authToken);
 
       setToken(authToken);
       setUser(authUser);
@@ -144,6 +169,8 @@ export function AuthProvider({ children }) {
     setToken(null);
     setUser(null);
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refresh_token');
     localStorage.removeItem('ai_ecommerce_user');
   };
 
@@ -180,7 +207,7 @@ export function AuthProvider({ children }) {
         token,
         loading,
         isAuthenticated: !!user,
-        isAdmin: user?.role === 'admin',
+        isAdmin: user?.role === 'admin' || user?.role === 'ROLE_ADMIN',
         login,
         register,
         logout,
