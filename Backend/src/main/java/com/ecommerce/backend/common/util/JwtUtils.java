@@ -3,7 +3,6 @@ package com.ecommerce.backend.common.util;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -13,6 +12,7 @@ import java.util.Date;
 
 @Component
 public class JwtUtils {
+
     @Value("${jwt.secret}")
     private String secretKey;
 
@@ -23,13 +23,15 @@ public class JwtUtils {
     private long refreshExpiration;
 
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(secretKey.getBytes(StandardCharsets.UTF_8));
+        return Keys.hmacShaKeyFor(
+                secretKey.getBytes(StandardCharsets.UTF_8)
+        );
     }
 
-    //Sinh accessToken
     public String generateAccessToken(String email, String role) {
         return Jwts.builder()
                 .subject(email)
+                .claim("type", "access")
                 .claim("role", role)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessExpiration))
@@ -37,27 +39,38 @@ public class JwtUtils {
                 .compact();
     }
 
-    // Sinh Refresh Token
     public String generateRefreshToken(String email) {
         return Jwts.builder()
                 .subject(email)
+                .claim("type", "refresh")
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + refreshExpiration))
+                .expiration(
+                        new Date(System.currentTimeMillis() + refreshExpiration)
+                )
                 .signWith(getSigningKey())
                 .compact();
     }
 
-    // Trích xuất Email từ Token
     public String getEmailFromToken(String token) {
         return extractAllClaims(token).getSubject();
     }
 
-    // Validation Token
-    public boolean validateToken(String token) {
+    public boolean validateAccessToken(String token) {
+        return validateTokenType(token, "access");
+    }
+
+    public boolean validateRefreshToken(String token) {
+        return validateTokenType(token, "refresh");
+    }
+
+    private boolean validateTokenType(String token, String expectedType) {
         try {
-            extractAllClaims(token);
-            return true;
-        } catch (Exception e) {
+            Claims claims = extractAllClaims(token);
+
+            return expectedType.equals(claims.get("type", String.class))
+                    && claims.getSubject() != null
+                    && !claims.getSubject().isBlank();
+        } catch (Exception exception) {
             return false;
         }
     }
@@ -70,4 +83,3 @@ public class JwtUtils {
                 .getPayload();
     }
 }
-

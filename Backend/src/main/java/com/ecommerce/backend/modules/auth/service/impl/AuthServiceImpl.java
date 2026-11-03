@@ -53,7 +53,11 @@ public class AuthServiceImpl implements AuthService {
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new RuntimeException("Email hoặc mật khẩu không chính xác!");
         }
-
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new RuntimeException(
+                    "Tài khoản đã bị khóa hoặc chưa được kích hoạt!"
+            );
+        }
         String accessToken = jwtUtils.generateAccessToken(user.getEmail(), user.getRole().name());
         String refreshToken = jwtUtils.generateRefreshToken(user.getEmail());
 
@@ -62,15 +66,29 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse refreshToken(String refreshToken) {
-        if (!jwtUtils.validateToken(refreshToken)) {
-            throw new RuntimeException("Refresh Token không hợp lệ hoặc đã hết hạn!");
+        if (!jwtUtils.validateRefreshToken(refreshToken)) {
+            throw new RuntimeException(
+                    "Refresh Token không hợp lệ hoặc đã hết hạn!"
+            );
         }
 
         String email = jwtUtils.getEmailFromToken(refreshToken);
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Không tìm thấy người dùng!"));
 
-        String newAccessToken = jwtUtils.generateAccessToken(user.getEmail(), user.getRole().name());
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() ->
+                        new RuntimeException("Không tìm thấy người dùng!")
+                );
+
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new RuntimeException(
+                    "Tài khoản đã bị khóa hoặc chưa được kích hoạt!"
+            );
+        }
+
+        String newAccessToken = jwtUtils.generateAccessToken(
+                user.getEmail(),
+                user.getRole().name()
+        );
 
         return AuthResponse.builder()
                 .success(true)

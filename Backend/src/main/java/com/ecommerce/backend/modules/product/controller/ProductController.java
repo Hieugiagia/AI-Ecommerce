@@ -2,8 +2,10 @@ package com.ecommerce.backend.modules.product.controller;
 
 import com.ecommerce.backend.modules.product.dto.ProductFilterParams;
 import com.ecommerce.backend.modules.product.dto.ProductListResponse;
-import com.ecommerce.backend.modules.product.entity.Product;
+import com.ecommerce.backend.modules.product.dto.ProductRequest;
+import com.ecommerce.backend.modules.product.dto.ProductResponse;
 import com.ecommerce.backend.modules.product.service.ProductService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -23,24 +25,21 @@ public class ProductController {
         return ResponseEntity.ok(productService.getProducts(params));
     }
 
-
     @GetMapping("/{idOrSlug}")
-    public ResponseEntity<Map<String, Object>> getProductByIdOrSlug(@PathVariable String idOrSlug) {
-        Product product = productService.getByIdOrSlug(idOrSlug);
-        return ResponseEntity.ok(Map.of("product", product));
+    public ResponseEntity<Map<String, ProductResponse>> getProductByIdOrSlug(@PathVariable String idOrSlug) {
+        return ResponseEntity.ok(Map.of("product", productService.getByIdOrSlug(idOrSlug)));
     }
-
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Product> createProduct(@RequestBody Product product) {
-        return ResponseEntity.ok(productService.createProduct(product));
+    public ResponseEntity<ProductResponse> createProduct(@Valid @RequestBody ProductRequest request) {
+        return ResponseEntity.ok(productService.createProduct(request));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Product> updateProduct(@PathVariable Long id, @RequestBody Product product) {
-        return ResponseEntity.ok(productService.updateProduct(id, product));
+    public ResponseEntity<ProductResponse> updateProduct(@PathVariable Long id, @Valid @RequestBody ProductRequest request) {
+        return ResponseEntity.ok(productService.updateProduct(id, request));
     }
 
     @DeleteMapping("/{id}")

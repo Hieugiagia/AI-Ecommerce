@@ -8,7 +8,8 @@ import java.util.List;
 import java.util.UUID;
 
 @Repository
-public interface AiChatMessageRepository extends JpaRepository<AiChatMessage, UUID> {
-// Lấy toàn bộ tin nhắn theo sessionId sắp xếp theo thứ tự gửi tăng dần để nạp vào Context LLM
+public interface AiChatMessageRepository extends JpaRepository<AiChatMessage, Long> {
+    // Lấy toàn bộ tin nhắn theo sessionId sắp xếp theo thứ tự gửi tăng dần để nạp
+    // vào Context LLM
     List<AiChatMessage> findBySessionIdOrderByCreatedAtAsc(UUID sessionId);
 }

@@ -16,4 +16,5 @@ public class ProductFilterParams {
     private Integer page = 1;    // Mặc định trang 1 từ Frontend
     private Integer limit = 12;  // Số sản phẩm mỗi trang
     private String sort;         // Sắp xếp: price-asc, price-desc, newest
+    private String status;
 }
