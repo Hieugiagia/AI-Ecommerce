@@ -13,6 +13,6 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ProductListResponse {
-    private List<Product> products;
+    private List<ProductResponse> products;
     private long total;
 }
