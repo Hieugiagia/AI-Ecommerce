@@ -1,5 +1,5 @@
 import { apiRequest } from './api';
-import { PRODUCTS as INITIAL_PRODUCTS } from '../data/mockData';
+
 
 /**
  * Hàm chuẩn hóa đối tượng Sản phẩm nhận về từ PostgreSQL Backend:
@@ -30,7 +30,7 @@ export function normalizeProduct(p) {
     originalPrice,
     stock: p.stock !== undefined ? Number(p.stock) : 0,
     version: p.version !== undefined ? Number(p.version) : 0,
-    thumbnailUrl: image,
+    thumbnailUrl: p.thumbnailUrl ?? p.thumbnail_url ?? p.image ?? '',
     image, // Hỗ trợ UI cũ truy cập .image
     gallery: Array.isArray(p.gallery) && p.gallery.length > 0 ? p.gallery : [image],
     status: p.status || 'PUBLISHED',
@@ -77,8 +77,8 @@ export const productService = {
     if (searchTerm) query.append('q', searchTerm);
     if (params.category && params.category !== 'all') query.append('category', params.category);
     if (params.brand && params.brand !== 'all') query.append('brand', params.brand);
-    if (params.minPrice) query.append('minPrice', params.minPrice);
-    if (params.maxPrice) query.append('maxPrice', params.maxPrice);
+    if (params.minPrice !== undefined) query.append('minPrice', params.minPrice);
+    if (params.maxPrice !== undefined) query.append('maxPrice', params.maxPrice);
     if (params.page !== undefined) query.append('page', params.page);
     if (params.limit !== undefined) query.append('limit', params.limit);
     if (params.sort) query.append('sort', params.sort);
@@ -86,59 +86,30 @@ export const productService = {
     const queryString = query.toString();
     const endpoint = `/products${queryString ? `?${queryString}` : ''}`;
 
-    try {
-      const data = await apiRequest(endpoint, { method: 'GET' });
-      let rawProducts = [];
-      let total = 0;
-
-      if (data && Array.isArray(data.products)) {
-        rawProducts = data.products;
-        total = data.total !== undefined ? data.total : data.products.length;
-      } else if (Array.isArray(data)) {
-        rawProducts = data;
-        total = data.length;
-      } else if (data && Array.isArray(data.data)) {
-        rawProducts = data.data;
-        total = data.total !== undefined ? data.total : data.data.length;
-      }
-
-      // Nếu Backend trả về kết quả
-      if (rawProducts.length > 0) {
-        return {
-          products: rawProducts.map(normalizeProduct),
-          total,
-        };
-      }
-
-      // Nếu Backend trả về mảng rỗng hợp lệ (ví dụ không có sản phẩm nào khớp bộ lọc)
-      if (data && (Array.isArray(data.products) || Array.isArray(data) || Array.isArray(data.data))) {
-        return { products: [], total: 0 };
-      }
-
-      return {
-        products: INITIAL_PRODUCTS.map(normalizeProduct),
-        total: INITIAL_PRODUCTS.length,
-      };
-    } catch (err) {
-      console.warn('Backend chưa sẵn sàng hoặc lỗi /api/products, sử dụng dữ liệu dự phòng:', err.message);
-
-      // Fallback khi backend chưa chạy
-      let filtered = [...INITIAL_PRODUCTS];
-      if (searchTerm) {
-        const qLower = searchTerm.toLowerCase();
-        filtered = filtered.filter((p) => p.name.toLowerCase().includes(qLower));
-      }
-      if (params.category && params.category !== 'all') {
-        filtered = filtered.filter((p) => p.category === params.category || String(p.categoryId) === String(params.category));
-      }
-      if (params.brand && params.brand !== 'all') {
-        filtered = filtered.filter((p) => p.brand?.toLowerCase() === params.brand.toLowerCase());
-      }
-      return {
-        products: filtered.map(normalizeProduct),
-        total: filtered.length,
-      };
+    const data = await apiRequest(endpoint, { method: 'GET' });
+    if (!Array.isArray(data?.products)) {
+      throw new Error('Dữ liệu danh sách sản phẩm không hợp lệ');
     }
+    return { products: data.products.map(normalizeProduct), total: data.total };
+  },
+
+  async getAdminProducts(params = {}) {
+    const query = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null && value !== '' && value !== 'all') {
+        query.set(key, value);
+      }
+    }
+    const data = await apiRequest(`/admin/products?${query}`);
+    if (!Array.isArray(data?.products)) {
+      throw new Error('Dữ liệu danh sách sản phẩm không hợp lệ');
+    }
+    return { products: data.products.map(normalizeProduct), total: data.total };
+  },
+
+  async getAdminProductById(id) {
+    const data = await apiRequest(`/admin/products/${id}`);
+    return normalizeProduct(data.product);
   },
 
   /**
@@ -149,17 +120,10 @@ export const productService = {
   async getProductById(idOrSlug) {
     try {
       const data = await apiRequest(`/products/${idOrSlug}`, { method: 'GET' });
-      const raw = data?.product || data?.data || data;
-      if (raw && (raw.id || raw.name)) {
-        return normalizeProduct(raw);
-      }
-      throw new Error('Sản phẩm không tìm thấy trên server');
-    } catch (err) {
-      console.warn('Backend chưa sẵn sàng hoặc lỗi /api/products/{id}, tìm trong dự phòng:', err.message);
-      const found = INITIAL_PRODUCTS.find(
-        (p) => String(p.id) === String(idOrSlug) || p.slug === String(idOrSlug)
-      );
-      return found ? normalizeProduct(found) : null;
+      return normalizeProduct(data.product);
+    } catch (error) {
+      if (error.status === 404) return null;
+      throw error;
     }
   },
 
@@ -169,22 +133,11 @@ export const productService = {
    * @param {Object} productData
    */
   async createProduct(productData) {
-    const payload = {
-      name: productData.name,
-      slug: productData.slug || productData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-      description: productData.description || '',
-      price: typeof productData.price === 'string' ? parseFloat(productData.price) : Number(productData.price) || 0,
-      stock: Number(productData.stock) || 0,
-      categoryId: productData.categoryId || productData.category_id || null,
-      thumbnailUrl: productData.thumbnailUrl || productData.image || '',
-      status: productData.status || 'PUBLISHED',
-      version: 0,
-    };
-
-    return await apiRequest('/products', {
+    const data = await apiRequest('/products', {
       method: 'POST',
-      body: payload,
+      body: productPayload(productData),
     });
+    return normalizeProduct(data);
   },
 
   /**
@@ -194,17 +147,11 @@ export const productService = {
    * @param {Object} productData
    */
   async updateProduct(id, productData) {
-    const payload = {
-      ...productData,
-      price: productData.price !== undefined ? Number(productData.price) : undefined,
-      stock: productData.stock !== undefined ? Number(productData.stock) : undefined,
-      thumbnailUrl: productData.thumbnailUrl || productData.image,
-    };
-
-    return await apiRequest(`/products/${id}`, {
+    const data = await apiRequest(`/products/${id}`, {
       method: 'PUT',
-      body: payload,
+      body: { ...productPayload(productData), version: productData.version },
     });
+    return normalizeProduct(data);
   },
 
   /**
@@ -220,3 +167,16 @@ export const productService = {
 };
 
 export default productService;
+
+function productPayload(product) {
+  return {
+    name: product.name.trim(),
+    slug: product.slug,
+    description: product.description || '',
+    price: Number(product.price),
+    stock: Number(product.stock),
+    categoryId: Number(product.categoryId),
+    thumbnailUrl: product.thumbnailUrl ?? '',
+    status: product.status,
+  };
+}

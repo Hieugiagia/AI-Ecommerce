@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Star,
   ShoppingCart,
@@ -20,7 +20,6 @@ import {
   ThumbsUp,
   MessageSquare,
 } from 'lucide-react';
-import { PRODUCTS } from '../data/mockData';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/ProductCard';
@@ -32,55 +31,49 @@ export default function ProductDetailPage() {
   const { addToCart } = useCart();
   const { isAuthenticated } = useAuth();
 
-  const [product, setProduct] = useState(
-    () => PRODUCTS.find((p) => String(p.id) === String(id) || p.slug === String(id)) || PRODUCTS[0]
-  );
-
-  const [activeImage, setActiveImage] = useState(product?.thumbnailUrl || product?.image || '');
-  const [relatedProducts, setRelatedProducts] = useState(() =>
-    PRODUCTS.filter((p) => p.category === product.category && p.id !== product.id).slice(0, 4)
-  );
+  const [product, setProduct] = useState(null);
+  const [activeImage, setActiveImage] = useState('');
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [selectedVariant, setSelectedVariant] = useState(null);
+  const [selectedColor, setSelectedColor] = useState(null);
+  const [detailState, setDetailState] = useState({ id: null, error: '' });
+  const [retry, setRetry] = useState(0);
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
+    let active = true;
     async function fetchDetail() {
       try {
         const data = await productService.getProductById(id);
-        if (data) {
-          setProduct(data);
-          setActiveImage(data.thumbnailUrl || data.image || data.thumbnail_url || '');
-          if (data.variants?.length) setSelectedVariant(data.variants[0]);
-          if (data.colors?.length) setSelectedColor(data.colors[0]);
-
-          // Lấy sản phẩm tương quan từ Backend
-          try {
-            const relRes = await productService.getProducts({
-              category: data.category || data.categoryId || data.slug,
-              limit: 5,
-            });
-            const list = relRes?.products || (Array.isArray(relRes) ? relRes : []);
-            const filtered = list.filter((p) => String(p.id) !== String(data.id)).slice(0, 4);
-            if (filtered.length > 0) {
-              setRelatedProducts(filtered);
-            } else {
-              setRelatedProducts(
-                PRODUCTS.filter((p) => p.category === data.category && String(p.id) !== String(data.id)).slice(0, 4)
-              );
-            }
-          } catch {
-            setRelatedProducts(
-              PRODUCTS.filter((p) => p.category === data.category && String(p.id) !== String(data.id)).slice(0, 4)
-            );
-          }
+        if (!active) return;
+        setProduct(data);
+        setRelatedProducts([]);
+        setSelectedVariant(data?.variants?.[0] || null);
+        setSelectedColor(data?.colors?.[0] || null);
+        setActiveImage(data?.image || '');
+        setQuantity(1);
+        setDetailState({ id, error: '' });
+        if (!data) return;
+        try {
+          const related = await productService.getProducts({
+            category: data.categoryId, limit: 5,
+          });
+          if (active) setRelatedProducts(
+            related.products.filter((item) => item.id !== data.id).slice(0, 4)
+          );
+        } catch {
+          // Related products are optional; never substitute sample products.
         }
-      } catch (err) {
-        console.warn('Lỗi lấy chi tiết sản phẩm:', err);
+      } catch (error) {
+        if (active) {
+          setProduct(null);
+          setDetailState({ id, error: error.message });
+        }
       }
     }
     fetchDetail();
-  }, [id]);
-  const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0] || null);
-  const [selectedColor, setSelectedColor] = useState(product.colors?.[0] || null);
-  const [quantity, setQuantity] = useState(1);
+    return () => { active = false; };
+  }, [id, retry]);
   const [activeTab, setActiveTab] = useState('specs'); // 'specs', 'desc', 'reviews'
   const [isAdded, setIsAdded] = useState(false);
   const [isWishlist, setIsWishlist] = useState(false);
@@ -141,6 +134,16 @@ export default function ProductDetailPage() {
     setReviewSubmitted(true);
     setTimeout(() => setReviewSubmitted(false), 3000);
   };
+
+  if (detailState.id !== id) {
+    return <p role="status" className="p-12 text-center">Đang tải sản phẩm...</p>;
+  }
+  if (detailState.error) {
+    return <div role="alert" className="p-12 text-center text-rose-700"><p>{detailState.error}</p><button className="mt-4 underline" onClick={() => setRetry((value) => value + 1)}>Thử lại</button></div>;
+  }
+  if (!product) {
+    return <div className="p-12 text-center"><h1 className="text-xl font-bold">Không tìm thấy sản phẩm</h1><p className="mt-2">Sản phẩm không tồn tại hoặc hiện chưa được công khai.</p><Link className="mt-4 inline-block text-indigo-600 underline" to="/products">Xem các sản phẩm khác</Link></div>;
+  }
 
   const currentPrice = product.price + (selectedVariant?.priceDelta || 0);
   const currentOriginalPrice = product.originalPrice + (selectedVariant?.priceDelta || 0);
