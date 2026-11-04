@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSearchParams, useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -18,92 +18,83 @@ import {
   ArrowUpDown,
   Flame,
   Check,
-  Tag,
-  Filter,
   Monitor,
   Home,
 } from 'lucide-react';
-import { PRODUCTS, CATEGORIES } from '../data/mockData';
+import { priceBounds } from '../services/productFilters';
 import ProductCard from '../components/ProductCard';
 import { productService } from '../services/productService';
-import { categoryService } from '../services/categoryService';
+import { apiRequest } from '../services/api';
 
-export default function ProductsPage({ onOpenAiChat }) {
+export default function ProductsPage() {
   const { category: paramCategory } = useParams();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-
-  const rawCategory = paramCategory || searchParams.get('category') || 'all';
-  const initialSearch = searchParams.get('search') || '';
-  const initialBrand = searchParams.get('brand') || 'all';
-  const initialPrice = searchParams.get('price') || 'all';
-
-  const [selectedCategory, setSelectedCategory] = useState(rawCategory);
-  const [searchQuery, setSearchQuery] = useState(initialSearch);
-  const [selectedBrand, setSelectedBrand] = useState(initialBrand);
-  const [priceRange, setPriceRange] = useState(initialPrice);
-  const [sortBy, setSortBy] = useState('featured');
+  const selectedCategory = paramCategory || searchParams.get('category') || 'all';
+  const searchQuery = searchParams.get('search') || searchParams.get('q') || '';
+  const priceRange = searchParams.get('price') || 'all';
+  const sortBy = ['newest', 'price-asc', 'price-desc'].includes(searchParams.get('sort')) ? searchParams.get('sort') : 'newest';
+  const rawPage = Number(searchParams.get('page') || 1);
+  const page = Number.isSafeInteger(rawPage) && rawPage > 0 ? rawPage : 1;
+  const limit = 12;
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false);
+  const [categories, setCategories] = useState([{ id: 'all', name: 'Tất cả sản phẩm', slug: 'all' }]);
+  const [categoryError, setCategoryError] = useState('');
+  const [retry, setRetry] = useState(0);
+  const [result, setResult] = useState({ key: '', products: [], total: 0, error: '' });
+  const requestKey = JSON.stringify([selectedCategory, searchQuery, priceRange, sortBy, page, retry]);
+  const loading = result.key !== requestKey;
+  const serverProducts = loading ? [] : result.products;
+  const total = loading ? 0 : result.total;
+  const error = loading ? '' : result.error;
 
-  const [serverProducts, setServerProducts] = useState(PRODUCTS);
-  const [categories, setCategories] = useState(CATEGORIES);
+  function changeFilter(key, value) {
+    const next = new URLSearchParams(searchParams);
+    if (paramCategory) next.set('category', paramCategory);
+    next.delete('brand');
+    next.delete('q');
+    if (searchQuery) next.set('search', searchQuery);
+    if (!value || value === 'all') next.delete(key);
+    else next.set(key, value);
+    if (key !== 'page') next.delete('page');
+    navigate('/products' + (next.size ? '?' + next : ''), { replace: key === 'search' });
+  }
+  const setSearchQuery = (value) => changeFilter('search', value);
+  const setPriceRange = (value) => changeFilter('price', value);
+  const setSortBy = (value) => changeFilter('sort', value);
 
-  // Auto redirect special categories to their dedicated pages
   useEffect(() => {
-    if (rawCategory === 'thu-cu' || rawCategory === 'thu-cu-doi-moi' || rawCategory === 'trade-in') {
-      navigate('/thu-cu-doi-moi', { replace: true });
-    } else if (rawCategory === 'khuyen-mai' || rawCategory === 'promotions') {
-      navigate('/khuyen-mai', { replace: true });
-    }
-  }, [rawCategory, navigate]);
+    if (['thu-cu', 'thu-cu-doi-moi', 'trade-in'].includes(selectedCategory)) navigate('/thu-cu-doi-moi', { replace: true });
+    if (['khuyen-mai', 'promotions'].includes(selectedCategory)) navigate('/khuyen-mai', { replace: true });
+  }, [selectedCategory, navigate]);
 
   useEffect(() => {
-    const cat = paramCategory || searchParams.get('category') || 'all';
-    setSelectedCategory(cat);
-    setSearchQuery(searchParams.get('search') || '');
-    setSelectedBrand(searchParams.get('brand') || 'all');
-    setPriceRange(searchParams.get('price') || 'all');
-  }, [paramCategory, searchParams]);
-
-  // Lấy danh mục từ Backend
-  useEffect(() => {
-    async function fetchCategories() {
-      try {
-        const cats = await categoryService.getCategories();
-        if (cats && cats.length > 0) {
-          const hasAll = cats.some((c) => c.slug === 'all');
-          setCategories(
-            hasAll
-              ? cats
-              : [{ id: 'all', name: 'Tất cả sản phẩm', slug: 'all', icon: 'LayoutGrid' }, ...cats]
-          );
-        }
-      } catch (err) {
-        console.warn('Lỗi lấy danh mục từ backend:', err);
+    let active = true;
+    apiRequest('/categories').then((data) => {
+      if (!Array.isArray(data)) throw new Error('Danh sách danh mục không hợp lệ');
+      if (active) {
+        setCategories([{ id: 'all', name: 'Tất cả sản phẩm', slug: 'all' }, ...data.filter((item) => item.isActive)]);
+        setCategoryError('');
       }
-    }
-    fetchCategories();
-  }, []);
+    }).catch((err) => { if (active) setCategoryError(err.message); });
+    return () => { active = false; };
+  }, [retry]);
 
-  // Lấy sản phẩm từ Backend
   useEffect(() => {
-    async function loadProducts() {
+    let active = true;
+    const timer = setTimeout(async () => {
       try {
-        const res = await productService.getProducts({
-          category: selectedCategory,
-          brand: selectedBrand,
-          search: searchQuery,
-          sort: sortBy,
+        const data = await productService.getProducts({
+          category: selectedCategory, q: searchQuery, sort: sortBy, page, limit,
+          ...priceBounds(priceRange),
         });
-        if (res && Array.isArray(res.products)) {
-          setServerProducts(res.products);
-        }
+        if (active) setResult({ key: requestKey, products: data.products, total: data.total, error: '' });
       } catch (err) {
-        console.warn('Lỗi lấy danh sách sản phẩm từ backend:', err);
+        if (active) setResult({ key: requestKey, products: [], total: 0, error: err.message });
       }
-    }
-    loadProducts();
-  }, [selectedCategory, selectedBrand, searchQuery, sortBy]);
+    }, 250);
+    return () => { active = false; clearTimeout(timer); };
+  }, [selectedCategory, searchQuery, priceRange, sortBy, page, requestKey]);
 
   // Category metadata for banners
   const categoryBanners = {
@@ -172,27 +163,6 @@ export default function ProductsPage({ onOpenAiChat }) {
     }
   };
 
-  const allBrands = useMemo(() => {
-    const list = Array.from(new Set(serverProducts.map((p) => p.brand).filter(Boolean)));
-    return ['all', ...list];
-  }, [serverProducts]);
-
-  // Brands specific to current selected category
-  const categoryBrands = useMemo(() => {
-    const pool = selectedCategory === 'all'
-      ? serverProducts
-      : serverProducts.filter((p) => p.category === selectedCategory);
-    return Array.from(new Set(pool.map((p) => p.brand).filter(Boolean)));
-  }, [selectedCategory, serverProducts]);
-
-  // Suggested products when filter returns 0 products
-  const suggestedProducts = useMemo(() => {
-    const pool = selectedCategory !== 'all'
-      ? serverProducts.filter((p) => p.category === selectedCategory)
-      : serverProducts;
-    return pool.slice(0, 6);
-  }, [selectedCategory, serverProducts]);
-
   const hotTags = [
     { label: 'iPhone 15 Pro Max', badge: 'Hot', query: 'iPhone 15' },
     { label: 'Galaxy S24 Ultra', badge: 'Hot', query: 'S24 Ultra' },
@@ -215,86 +185,11 @@ export default function ProductsPage({ onOpenAiChat }) {
     { id: 'above30', label: 'Trên 30 triệu' },
   ];
 
-  // Lọc sản phẩm
-  const filteredProducts = useMemo(() => {
-    return serverProducts.filter((product) => {
-      if (selectedCategory !== 'all') {
-        const matchCat =
-          product.category === selectedCategory ||
-          product.slug === selectedCategory ||
-          String(product.categoryId) === String(selectedCategory);
-        if (!matchCat) return false;
-      }
-      if (selectedBrand !== 'all' && product.brand !== selectedBrand) {
-        return false;
-      }
-
-      // Hỗ trợ mọi phân khúc giá từ Mega Menu & Sidebar
-      if (priceRange === 'under1m' && product.price >= 1000000) return false;
-      if (priceRange === '1to3m' && (product.price < 1000000 || product.price > 3000000)) return false;
-      if (priceRange === '3to5m' && (product.price < 3000000 || product.price > 5000000)) return false;
-      if (priceRange === 'under5' && product.price >= 5000000) return false;
-      if (priceRange === 'under10' && product.price >= 10000000) return false;
-      if (priceRange === '5to10' && (product.price < 5000000 || product.price > 10000000)) return false;
-      if (priceRange === '5to15' && (product.price < 5000000 || product.price > 15000000)) return false;
-      if (priceRange === '10to15' && (product.price < 10000000 || product.price > 15000000)) return false;
-      if (priceRange === '15to20' && (product.price < 15000000 || product.price > 20000000)) return false;
-      if (priceRange === '15to25' && (product.price < 15000000 || product.price > 25000000)) return false;
-      if (priceRange === '20to25' && (product.price < 20000000 || product.price > 25000000)) return false;
-      if (priceRange === '25to30' && (product.price < 25000000 || product.price > 30000000)) return false;
-      if (priceRange === 'above20' && product.price <= 20000000) return false;
-      if (priceRange === 'above25' && product.price <= 25000000) return false;
-      if (priceRange === 'above30' && product.price <= 30000000) return false;
-
-      if (searchQuery.trim()) {
-        const query = searchQuery.toLowerCase().trim();
-        const matchName = product.name?.toLowerCase().includes(query);
-        const matchCategory = product.categoryName?.toLowerCase().includes(query);
-        const matchBrand = product.brand?.toLowerCase().includes(query);
-        const matchDesc = product.description?.toLowerCase().includes(query);
-        if (!matchName && !matchCategory && !matchBrand && !matchDesc) return false;
-      }
-
-      return true;
-    }).sort((a, b) => {
-      if (sortBy === 'price-asc') return a.price - b.price;
-      if (sortBy === 'price-desc') return b.price - a.price;
-      if (sortBy === 'rating') return (b.rating || 5) - (a.rating || 5);
-      if (sortBy === 'sold') return (b.sold || 0) - (a.sold || 0);
-      return 0;
-    });
-  }, [serverProducts, selectedCategory, selectedBrand, priceRange, searchQuery, sortBy]);
-
-  const handleSelectCategory = (catSlug) => {
-    setSelectedCategory(catSlug);
-    setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (catSlug === 'all') next.delete('category');
-      else next.set('category', catSlug);
-      return next;
-    });
-  };
-
-  const handleResetFilters = () => {
-    setSelectedCategory('all');
-    setSelectedBrand('all');
-    setPriceRange('all');
-    setSearchQuery('');
-    setSortBy('featured');
-    setSearchParams({});
-  };
-
-  const hasActiveFilters =
-    selectedCategory !== 'all' ||
-    selectedBrand !== 'all' ||
-    priceRange !== 'all' ||
-    searchQuery.trim() !== '';
-
-  const activeFilterCount =
-    (selectedCategory !== 'all' ? 1 : 0) +
-    (selectedBrand !== 'all' ? 1 : 0) +
-    (priceRange !== 'all' ? 1 : 0) +
-    (searchQuery.trim() ? 1 : 0);
+  const filteredProducts = serverProducts;
+  const handleSelectCategory = (slug) => changeFilter('category', slug);
+  const handleResetFilters = () => navigate('/products');
+  const hasActiveFilters = selectedCategory !== 'all' || priceRange !== 'all' || !!searchQuery.trim();
+  const activeFilterCount = Number(selectedCategory !== 'all') + Number(priceRange !== 'all') + Number(!!searchQuery.trim());
 
   // Render Component Thanh Bar Bên Phải (Right Filter Sidebar - Image 2 Style)
   const renderFilterSidebar = () => (
@@ -334,14 +229,7 @@ export default function ProductsPage({ onOpenAiChat }) {
         <div className="space-y-1.5">
           {categories.map((cat) => {
             const Icon = getCategoryIcon(cat.slug);
-            const isSelected = selectedCategory === cat.slug;
-            const count =
-              cat.slug === 'all'
-                ? serverProducts.length
-                : serverProducts.filter(
-                    (p) => p.category === cat.slug || String(p.categoryId) === String(cat.id)
-                  ).length;
-
+            const isSelected = selectedCategory === cat.slug || String(cat.id) === selectedCategory;
             return (
               <motion.button
                 key={cat.id}
@@ -369,13 +257,7 @@ export default function ProductsPage({ onOpenAiChat }) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                      isSelected ? 'bg-white/20 text-white' : 'bg-white text-slate-500 border border-slate-200/80'
-                    }`}
-                  >
-                    {count}
-                  </span>
+
                   <ChevronRight
                     className={`w-3.5 h-3.5 ${
                       isSelected ? 'text-white' : 'text-slate-400'
@@ -383,47 +265,6 @@ export default function ProductsPage({ onOpenAiChat }) {
                   />
                 </div>
               </motion.button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 3. Hãng sản xuất (Brand Grid - Khớp phong cách ảnh bên phải) */}
-      <div className="space-y-2.5 pt-4 border-t border-slate-100">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-            <Tag className="w-3.5 h-3.5 text-violet-600" />
-            Hãng Sản Xuất
-          </span>
-          {selectedBrand !== 'all' && (
-            <button
-              onClick={() => setSelectedBrand('all')}
-              className="text-[11px] text-indigo-600 hover:underline cursor-pointer"
-            >
-              Tất cả
-            </button>
-          )}
-        </div>
-
-        {/* Lưới các hãng bo tròn trắng viền mỏng như ảnh mẫu */}
-        <div className="grid grid-cols-2 gap-2">
-          {allBrands.map((b) => {
-            const isSelected = selectedBrand === b;
-            return (
-              <button
-                key={b}
-                onClick={() => {
-                  setSelectedBrand(b);
-                  setIsMobileFilterOpen(false);
-                }}
-                className={`px-3 py-2.5 rounded-2xl text-xs font-bold text-center transition-all cursor-pointer border ${
-                  isSelected
-                    ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
-                    : 'bg-white hover:bg-indigo-50/50 hover:border-indigo-300 text-slate-700 border-slate-200/80 shadow-2xs'
-                }`}
-              >
-                {b === 'all' ? 'Tất cả hãng' : b}
-              </button>
             );
           })}
         </div>
@@ -522,12 +363,7 @@ export default function ProductsPage({ onOpenAiChat }) {
             ? 'Tất cả sản phẩm'
             : categories.find((c) => c.slug === selectedCategory || String(c.id) === String(selectedCategory))?.name || 'Sản phẩm'}
         </span>
-        {selectedBrand !== 'all' && (
-          <>
-            <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span className="text-indigo-600 font-bold">{selectedBrand}</span>
-          </>
-        )}
+
       </nav>
 
       {/* 2. HERO CATEGORY BANNER (Modern MotionSites Style) */}
@@ -569,6 +405,8 @@ export default function ProductsPage({ onOpenAiChat }) {
         </div>
       </motion.div>
 
+      {searchParams.has('brand') && <p className="text-sm text-slate-600">Bộ lọc thương hiệu hiện chưa khả dụng. Bạn có thể tìm theo tên sản phẩm.</p>}
+      {categoryError && <p role="alert" className="text-sm text-amber-800">Không tải được danh mục: {categoryError} <button className="underline" onClick={() => setRetry((value) => value + 1)}>Thử lại</button></p>}
       {/* Nút bật bộ lọc trên Mobile */}
       <div className="lg:hidden flex items-center justify-between gap-3 bg-white border border-slate-200/80 rounded-2xl p-3 shadow-xs">
         <button
@@ -594,36 +432,6 @@ export default function ProductsPage({ onOpenAiChat }) {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* ================= CỘT TRÁI: DANH SÁCH SẢN PHẨM ================= */}
         <div className="lg:col-span-8 xl:col-span-9 space-y-6">
-          {/* Dải thương hiệu nhanh cho danh mục hiện tại */}
-          {categoryBrands.length > 0 && (
-            <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap pb-1 no-scrollbar">
-              <span className="text-xs font-bold text-slate-400 shrink-0">Hãng:</span>
-              <button
-                onClick={() => setSelectedBrand('all')}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border ${
-                  selectedBrand === 'all'
-                    ? 'bg-slate-900 text-white border-slate-900 shadow-xs'
-                    : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200/80 shadow-2xs'
-                }`}
-              >
-                Tất cả
-              </button>
-              {categoryBrands.map((brand) => (
-                <button
-                  key={brand}
-                  onClick={() => setSelectedBrand(brand === selectedBrand ? 'all' : brand)}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer border ${
-                    selectedBrand === brand
-                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs shadow-indigo-500/25'
-                      : 'bg-white hover:bg-indigo-50/60 hover:border-indigo-200 text-slate-700 border-slate-200/80 shadow-2xs'
-                  }`}
-                >
-                  {brand}
-                </button>
-              ))}
-            </div>
-          )}
-
           {/* Thanh công cụ tìm kiếm & Sắp xếp */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-white border border-slate-200/80 rounded-3xl shadow-xs">
             {/* Input tìm kiếm nhanh */}
@@ -633,7 +441,7 @@ export default function ProductsPage({ onOpenAiChat }) {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm sản phẩm theo tên, model, chip, tính năng..."
+                placeholder="Tìm theo tên sản phẩm..."
                 className="w-full bg-slate-50 border border-slate-200/70 focus:bg-white focus:border-indigo-500 rounded-2xl pl-10 pr-9 py-2 text-xs sm:text-sm text-slate-800 placeholder-slate-400 outline-none transition-all"
               />
               {searchQuery && (
@@ -649,7 +457,7 @@ export default function ProductsPage({ onOpenAiChat }) {
             {/* Sắp xếp & Số lượng kết quả */}
             <div className="flex items-center justify-between sm:justify-end gap-3 text-xs">
               <span className="text-slate-500 shrink-0 font-medium">
-                Tìm thấy <strong className="text-slate-900 font-bold">{filteredProducts.length}</strong> sản phẩm
+                Tìm thấy <strong className="text-slate-900 font-bold">{total}</strong> sản phẩm
               </span>
 
               <div className="flex items-center gap-1.5">
@@ -659,11 +467,9 @@ export default function ProductsPage({ onOpenAiChat }) {
                   onChange={(e) => setSortBy(e.target.value)}
                   className="bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-1.5 text-xs text-slate-800 font-semibold outline-none focus:border-indigo-500 cursor-pointer transition-all"
                 >
-                  <option value="featured">Nổi bật nhất</option>
-                  <option value="sold">Bán chạy nhất</option>
+                  <option value="newest">Mới nhất</option>
                   <option value="price-asc">Giá: Thấp đến Cao</option>
                   <option value="price-desc">Giá: Cao đến Thấp</option>
-                  <option value="rating">Đánh giá cao nhất</option>
                 </select>
               </div>
             </div>
@@ -686,21 +492,11 @@ export default function ProductsPage({ onOpenAiChat }) {
                 </span>
               )}
 
-              {selectedBrand !== 'all' && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-violet-50 text-violet-700 border border-violet-200">
-                  Hãng: {selectedBrand}
-                  <button
-                    onClick={() => setSelectedBrand('all')}
-                    className="hover:text-violet-900 cursor-pointer"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
+
 
               {priceRange !== 'all' && (
                 <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                  Giá: {priceRanges.find((p) => p.id === priceRange)?.label}
+                  Giá: {priceRanges.find((p) => p.id === priceRange)?.label || 'Khoảng giá đã chọn'}
                   <button
                     onClick={() => setPriceRange('all')}
                     className="hover:text-amber-900 cursor-pointer"
@@ -732,7 +528,11 @@ export default function ProductsPage({ onOpenAiChat }) {
           )}
 
           {/* LƯỚI SẢN PHẨM CHÍNH */}
-          {filteredProducts.length > 0 ? (
+          {loading ? <p role="status" className="p-8 text-center">Đang tải sản phẩm...</p> : error ? (
+            <div role="alert" className="rounded-3xl border border-rose-200 bg-white p-6 text-rose-700">
+              <p>{error}</p><button className="mt-3 underline" onClick={() => setRetry((value) => value + 1)}>Thử lại</button>
+            </div>
+          ) : filteredProducts.length > 0 ? (
             <motion.div
               layout
               className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-4 sm:gap-5"
@@ -753,7 +553,6 @@ export default function ProductsPage({ onOpenAiChat }) {
                     Không tìm thấy sản phẩm chính xác khớp bộ lọc này
                   </h3>
                   <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
-                    {selectedBrand !== 'all' ? `Hãng "${selectedBrand}" hiện chưa có cấu hình theo mức giá này. ` : ''}
                     Bạn có thể nới lỏng mức giá hoặc bấm nút bên dưới để xem toàn bộ sản phẩm.
                   </p>
                 </div>
@@ -766,31 +565,17 @@ export default function ProductsPage({ onOpenAiChat }) {
                 </button>
               </div>
 
-              {/* Gợi ý sản phẩm nổi bật cùng danh mục */}
-              {suggestedProducts.length > 0 && (
-                <div className="space-y-4 pt-2">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-                    <h4 className="text-sm font-extrabold text-slate-900 flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-amber-500" />
-                      <span>Gợi ý các sản phẩm nổi bật được quan tâm nhất</span>
-                    </h4>
-                    <button
-                      onClick={handleResetFilters}
-                      className="text-xs text-indigo-600 font-semibold hover:underline cursor-pointer"
-                    >
-                      Xem tất cả ({PRODUCTS.length})
-                    </button>
-                  </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-3 gap-4 sm:gap-5">
-                    {suggestedProducts.map((product) => (
-                      <ProductCard key={product.id} product={product} />
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           )}
+          {!loading && !error && total > 0 && (
+            <nav aria-label="Phân trang sản phẩm" className="flex items-center justify-between gap-3 text-sm">
+              <button disabled={page <= 1} className="rounded-xl border px-4 py-2 disabled:opacity-40" onClick={() => changeFilter('page', page - 1)}>Trước</button>
+              <span>Trang {page} / {Math.max(1, Math.ceil(total / limit))}</span>
+              <button disabled={page * limit >= total} className="rounded-xl border px-4 py-2 disabled:opacity-40" onClick={() => changeFilter('page', page + 1)}>Sau</button>
+            </nav>
+          )}
+          {!loading && !error && !serverProducts.length && page > 1 && <button className="text-indigo-600 underline" onClick={() => changeFilter('page', 1)}>Về trang đầu</button>}
         </div>
 
         {/* ================= CỘT PHẢI: THANH BAR BỘ LỌC (Right Filter Sidebar - Image 2 Style) ================= */}

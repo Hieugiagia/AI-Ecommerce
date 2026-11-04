@@ -21,7 +21,10 @@ public enum ErrorCode {
     PRODUCT_VERSION_REQUIRED(2006, "Bạn cần gửi version khi cập nhật sản phẩm", HttpStatus.BAD_REQUEST),
     INVALID_PRODUCT_PAGINATION(2007, "Page phải từ 1 và limit phải từ 1 đến 100", HttpStatus.BAD_REQUEST),
     INVALID_PRODUCT_FILTER(2008, "Bộ lọc không hợp lệ: kiểm tra khoảng giá, trạng thái hoặc kiểu sắp xếp", HttpStatus.BAD_REQUEST),
-    PRODUCT_BRAND_NOT_SUPPORTED(2009, "Bộ lọc thương hiệu chưa được hỗ trợ", HttpStatus.BAD_REQUEST)
+    PRODUCT_BRAND_NOT_SUPPORTED(2009, "Bộ lọc thương hiệu chưa được hỗ trợ", HttpStatus.BAD_REQUEST),
+    CART_ITEM_NOT_FOUND(3001, "Không tìm thấy mục trong giỏ hàng", HttpStatus.NOT_FOUND),
+    PRODUCT_NOT_AVAILABLE(3002, "Sản phẩm hiện không được mở bán", HttpStatus.BAD_REQUEST),
+    CART_STOCK_EXCEEDED(3003, "Số lượng yêu cầu vượt quá tồn kho", HttpStatus.CONFLICT)
     ;
 
     ErrorCode(int code, String message, HttpStatusCode httpStatusCode) {

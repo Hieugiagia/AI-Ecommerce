@@ -682,7 +682,7 @@ export default function HomePage({ onOpenAiChat }) {
             <div className="bg-white rounded-3xl border border-slate-200/80 p-2.5 shadow-sm space-y-0.5 h-full">
               <div className="px-3 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center justify-between">
                 <span>Danh mục công nghệ</span>
-                <span className="text-[10px] text-slate-400 font-medium">Rà chuột để mở</span>
+                
               </div>
               {sidebarCategories.map((item, idx) => {
                 const Icon = item.icon;
