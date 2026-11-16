@@ -28,7 +28,8 @@ import { productService } from '../services/productService';
 export default function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useCart();
+  const { addToCart, cartBusy } = useCart();
+  const [addError, setAddError] = useState('');
   const { isAuthenticated } = useAuth();
 
   const [product, setProduct] = useState(null);
@@ -156,19 +157,21 @@ export default function ProductDetailPage() {
     ? Math.round(((currentOriginalPrice - currentPrice) / currentOriginalPrice) * 100)
     : 0;
 
-  const handleAddToCart = () => {
-    addToCart(product, quantity, selectedVariant, selectedColor);
-    setIsAdded(true);
-    setTimeout(() => setIsAdded(false), 2000);
+  const addProduct = async () => {
+    setAddError('');
+    const result = await addToCart(product, quantity, selectedVariant, selectedColor);
+    if (result.requiresAuth) navigate('/login', { state: { from: { pathname: '/products/' + id } } });
+    else if (!result.success) setAddError(result.error);
+    return result;
   };
-
-  const handleBuyNow = () => {
-    addToCart(product, quantity, selectedVariant, selectedColor);
-    if (!isAuthenticated) {
-      navigate('/login', { state: { from: { pathname: '/checkout' } } });
-    } else {
-      navigate('/checkout');
+  const handleAddToCart = async () => {
+    if ((await addProduct()).success) {
+      setIsAdded(true);
+      setTimeout(() => setIsAdded(false), 2000);
     }
+  };
+  const handleBuyNow = async () => {
+    if ((await addProduct()).success) navigate('/checkout');
   };
 
 
@@ -519,7 +522,8 @@ export default function ProductDetailPage() {
                 {quantity}
               </span>
               <button
-                onClick={() => setQuantity((q) => q + 1)}
+                disabled={cartBusy || quantity >= product.stock}
+                onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
                 className="px-4 py-2 text-slate-600 hover:bg-slate-100 transition-colors font-bold cursor-pointer"
               >
                 +
@@ -527,6 +531,8 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
+          {addError && <p role="alert" className="text-sm text-rose-700">{addError}</p>}
+          {product.stock <= 0 && <p className="text-sm text-amber-700">Sản phẩm hiện đã hết hàng.</p>}
           {/* 7. CỤM NÚT MUA HÀNG (SaaS MotionSites Style) */}
           <div className="space-y-3 pt-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -535,6 +541,7 @@ export default function ProductDetailPage() {
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleBuyNow}
+                disabled={cartBusy || product.stock <= 0 || product.status !== 'PUBLISHED'}
                 className="w-full py-4 px-4 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl font-black text-sm uppercase transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/35 cursor-pointer flex flex-col items-center justify-center"
               >
                 <span className="flex items-center gap-1.5 text-base tracking-wide">
@@ -551,6 +558,7 @@ export default function ProductDetailPage() {
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleBuyNow}
+                disabled={cartBusy || product.stock <= 0 || product.status !== 'PUBLISHED'}
                 className="w-full py-4 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-sm uppercase transition-all shadow-md shadow-slate-900/10 cursor-pointer flex flex-col items-center justify-center"
               >
                 <span className="flex items-center gap-1.5 text-base tracking-wide">
@@ -567,6 +575,7 @@ export default function ProductDetailPage() {
             <motion.button
               whileTap={{ scale: 0.98 }}
               onClick={handleAddToCart}
+              disabled={cartBusy || isAdded || product.stock <= 0 || product.status !== 'PUBLISHED'}
               className={`w-full py-3.5 px-6 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer border ${
                 isAdded
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-500/20'

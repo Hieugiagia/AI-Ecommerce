@@ -46,6 +46,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 userRepository.findByEmail(email).filter(user ->
                                 user.getStatus() == UserStatus.ACTIVE
+                                        && jwtUtils.matchesAuthVersion(
+                                        token,
+                                        user.getAuthVersion()
+                                )
                         )
                         .ifPresent(user -> {var authorities = List.of(new SimpleGrantedAuthority(
                                             user.getRole().name()

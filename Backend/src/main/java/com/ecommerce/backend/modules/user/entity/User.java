@@ -34,6 +34,10 @@ public class User extends BaseEntity {
     @Column(name = "phone_number", length = 100)
     private String phoneNumber;
 
+    @Column(name = "auth_version", nullable = false, columnDefinition = "bigint default 0")
+    @Builder.Default
+    private Long authVersion = 0L;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false, length = 30)
     @Builder.Default

@@ -1,194 +1,118 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { VOUCHERS } from '../data/mockData';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { cartService } from '../services/cartService';
+import { normalizeCart } from '../services/cartModel';
+import { useAuth } from './AuthContext';
 
 const CartContext = createContext();
+const emptyCart = () => ({ items: [], itemCount: 0, subtotal: 0 });
 
 export function CartProvider({ children }) {
-  const [cart, setCart] = useState(() => {
-    try {
-      const saved = localStorage.getItem('ai_ecommerce_cart');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
+  const { user, token } = useAuth();
+  const authenticated = !!(user && token);
+  const session = authenticated ? JSON.stringify([user.id || user.email, token]) : 'guest';
+  // Remount on account/session changes: old responses cannot populate another cart.
+  return <CartSession key={session} authenticated={authenticated}>{children}</CartSession>;
+}
 
-  const [appliedVoucher, setAppliedVoucher] = useState(null);
+function CartSession({ children, authenticated }) {
+  const [snapshot, setSnapshot] = useState(authenticated ? null : emptyCart);
+  const [cartError, setCartError] = useState('');
+  const [cartBusy, setCartBusy] = useState(false);
   const [voucherError, setVoucherError] = useState('');
+  const inFlight = useRef(false);
+  const mounted = useRef(false);
 
   useEffect(() => {
+    mounted.current = true;
+    let active = true;
+    // Do not migrate the old shared browser cart into any account.
+    localStorage.removeItem('ai_ecommerce_cart');
+    if (authenticated) {
+      inFlight.current = true;
+      cartService.getCart().then(normalizeCart).then((data) => {
+        if (active) setSnapshot(data);
+      }).catch((error) => {
+        if (active) setCartError(error.message);
+      }).finally(() => { if (active) inFlight.current = false; });
+    }
+    return () => { active = false; mounted.current = false; };
+  }, [authenticated]);
+
+  const cart = snapshot?.items || [];
+  const cartLoading = authenticated && snapshot === null && !cartError;
+
+  async function perform(task, { loadingRequired = true } = {}) {
+    if (!authenticated) {
+      return { success: false, requiresAuth: true, error: 'Vui lòng đăng nhập để lưu giỏ hàng.' };
+    }
+    if (inFlight.current) return { success: false, error: 'Giỏ hàng đang cập nhật. Vui lòng thử lại.' };
+    if (loadingRequired && !snapshot) {
+      return { success: false, error: 'Chưa tải được giỏ hàng. Vui lòng mở giỏ và thử tải lại.' };
+    }
+    inFlight.current = true;
+    setCartBusy(true);
+    setCartError('');
     try {
-      localStorage.setItem('ai_ecommerce_cart', JSON.stringify(cart));
-    } catch (err) {
-      console.error('Failed to save cart to localStorage', err);
-    }
-  }, [cart]);
-
-  // Đồng bộ giỏ hàng với server qua GET /cart
-  useEffect(() => {
-    async function syncCartWithServer() {
-      const token = localStorage.getItem('auth_token') || localStorage.getItem('accessToken');
-      if (!token) return;
-      try {
-        const res = await cartService.getCart();
-        const serverItems = Array.isArray(res) ? res : res?.items || res?.cart?.items;
-        if (serverItems && serverItems.length > 0) {
-          setCart(serverItems);
-        }
-      } catch {
-        // Giữ nguyên local cart khi server offline
-      }
-    }
-    syncCartWithServer();
-  }, []);
-
-  const addToCart = (product, quantity = 1, variant = null, color = null) => {
-    const itemKey = `${product.id}-${variant?.name || 'def'}-${color?.name || 'def'}`;
-    const unitPrice = Number(product.price) + (variant?.priceDelta || 0);
-
-    // Gọi POST /cart/items lên server
-    cartService.addItem({
-      productId: product.id,
-      quantity,
-      variant: variant?.name || null,
-      color: color?.name || null,
-    }).catch(() => {});
-
-    setCart((prev) => {
-      const existingIndex = prev.findIndex((item) => item.key === itemKey);
-      if (existingIndex > -1) {
-        const updated = [...prev];
-        updated[existingIndex] = {
-          ...updated[existingIndex],
-          quantity: updated[existingIndex].quantity + quantity,
-        };
-        return updated;
-      }
-      return [
-        ...prev,
-        {
-          key: itemKey,
-          id: product.id,
-          name: product.name,
-          slug: product.slug,
-          image: product.thumbnailUrl || product.image || product.thumbnail_url,
-          thumbnailUrl: product.thumbnailUrl || product.image || product.thumbnail_url,
-          unitPrice,
-          originalPrice: product.originalPrice || product.price,
-          quantity,
-          variant: variant ? variant.name : null,
-          color: color ? color.name : null,
-          colorCode: color ? color.code : null,
-          category: product.category,
-        },
-      ];
-    });
-  };
-
-  const removeFromCart = (key) => {
-    // Gọi DELETE /cart/items/{itemID}
-    cartService.removeItem(key).catch(() => {});
-    setCart((prev) => prev.filter((item) => item.key !== key));
-  };
-
-  const updateQuantity = (key, delta) => {
-    const currentItem = cart.find((item) => item.key === key);
-    if (currentItem) {
-      const newQty = currentItem.quantity + delta;
-      if (newQty > 0) {
-        // Gọi PATCH /cart/items/{itemID}
-        cartService.updateItemQuantity(key, newQty).catch(() => {});
-      } else {
-        // Gọi DELETE /cart/items/{itemID}
-        cartService.removeItem(key).catch(() => {});
-      }
-    }
-
-    setCart((prev) =>
-      prev
-        .map((item) => {
-          if (item.key === key) {
-            const newQty = item.quantity + delta;
-            return newQty > 0 ? { ...item, quantity: newQty } : null;
-          }
-          return item;
-        })
-        .filter(Boolean)
-    );
-  };
-
-  const clearCart = () => {
-    // Gọi DELETE /cart/clear
-    cartService.clearCart().catch(() => {});
-    setCart([]);
-    setAppliedVoucher(null);
-  };
-
-  const applyVoucher = (code) => {
-    setVoucherError('');
-    if (!code || !code.trim()) {
-      setVoucherError('Vui lòng nhập mã giảm giá');
-      return false;
-    }
-    const found = VOUCHERS.find((v) => v.code.toUpperCase() === code.trim().toUpperCase());
-    if (!found) {
-      setVoucherError('Mã giảm giá không hợp lệ hoặc đã hết hạn');
-      return false;
-    }
-    if (found.minOrder && subtotal < found.minOrder) {
-      setVoucherError(`Đơn hàng cần tối thiểu ${new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(found.minOrder)} để áp dụng mã`);
-      return false;
-    }
-    setAppliedVoucher(found);
-    return true;
-  };
-
-  const removeVoucher = () => {
-    setAppliedVoucher(null);
-    setVoucherError('');
-  };
-
-  // Calculations
-  const cartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const subtotal = cart.reduce((acc, item) => acc + item.unitPrice * item.quantity, 0);
-
-  let discountAmount = 0;
-  if (appliedVoucher) {
-    if (appliedVoucher.discount < 1) {
-      // Percentage discount
-      discountAmount = Math.min(subtotal * appliedVoucher.discount, appliedVoucher.maxDiscount || Infinity);
-    } else {
-      // Fixed amount discount
-      discountAmount = appliedVoucher.discount;
+      const data = await task();
+      if (!mounted.current) return { success: false, error: 'Phiên đăng nhập đã thay đổi.' };
+      setSnapshot(data);
+      return { success: true };
+    } catch (error) {
+      if (mounted.current) setCartError(error.message);
+      return { success: false, error: error.message };
+    } finally {
+      inFlight.current = false;
+      if (mounted.current) setCartBusy(false);
     }
   }
 
-  const shippingFee = subtotal > 500000 || subtotal === 0 ? 0 : 30000;
-  const total = Math.max(0, subtotal - discountAmount + shippingFee);
+  const reloadCart = () => perform(async () => normalizeCart(await cartService.getCart()), { loadingRequired: false });
 
-  return (
-    <CartContext.Provider
-      value={{
-        cart,
-        cartCount,
-        subtotal,
-        discountAmount,
-        shippingFee,
-        total,
-        appliedVoucher,
-        voucherError,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        clearCart,
-        applyVoucher,
-        removeVoucher,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
-  );
+  const addToCart = (product, quantity = 1, variant = null, color = null) => {
+    if (variant || color) return Promise.resolve({ success: false, error: 'Sản phẩm có lựa chọn màu hoặc phiên bản hiện chưa được hỗ trợ.' });
+    if (!Number.isInteger(quantity) || quantity < 1) return Promise.resolve({ success: false, error: 'Số lượng phải là số nguyên từ 1.' });
+    return perform(async () => normalizeCart(await cartService.addItem({ productId: product.id, quantity })));
+  };
+
+  const updateQuantity = (key, delta) => perform(async () => {
+    const item = cart.find((entry) => entry.key === key);
+    if (!item) throw new Error('Không tìm thấy sản phẩm trong giỏ.');
+    const quantity = item.quantity + delta;
+    if (quantity <= 0) {
+      await cartService.removeItem(item.itemId);
+      return normalizeCart(await cartService.getCart());
+    }
+    return normalizeCart(await cartService.updateItemQuantity(item.itemId, quantity));
+  });
+
+  const removeFromCart = (key) => perform(async () => {
+    const item = cart.find((entry) => entry.key === key);
+    if (!item) throw new Error('Không tìm thấy sản phẩm trong giỏ.');
+    await cartService.removeItem(item.itemId);
+    return normalizeCart(await cartService.getCart());
+  });
+
+  const clearCart = () => perform(async () => {
+    await cartService.clearCart();
+    return emptyCart();
+  });
+
+  const subtotal = snapshot?.subtotal || 0;
+  const shippingFee = subtotal >= 500000 || subtotal === 0 ? 0 : 30000;
+  const canCheckout = authenticated && !!snapshot && !cartLoading && !cartBusy && !cartError
+    && cart.length > 0 && cart.every((item) => item.available);
+  const applyVoucher = () => {
+    setVoucherError('Mã giảm giá hiện chưa được hỗ trợ.');
+    return false;
+  };
+
+  return <CartContext.Provider value={{
+    cart, cartCount: snapshot?.itemCount || 0, subtotal, shippingFee,
+    total: subtotal + shippingFee, discountAmount: 0, appliedVoucher: null, voucherError,
+    cartLoading, cartBusy, cartError, canCheckout,
+    addToCart, updateQuantity, removeFromCart, clearCart, reloadCart, applyVoucher,
+    removeVoucher: () => setVoucherError(''),
+  }}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {

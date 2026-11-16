@@ -39,8 +39,8 @@ public class AuthServiceImpl implements AuthService {
 
         User savedUser = userRepository.save(user);
 
-        String accessToken = jwtUtils.generateAccessToken(savedUser.getEmail(), savedUser.getRole().name());
-        String refreshToken = jwtUtils.generateRefreshToken(savedUser.getEmail());
+        String accessToken = jwtUtils.generateAccessToken(savedUser.getEmail(), savedUser.getRole().name(), savedUser.getAuthVersion());
+        String refreshToken = jwtUtils.generateRefreshToken(savedUser.getEmail(), savedUser.getAuthVersion());
 
         return buildAuthResponse(savedUser, accessToken, refreshToken, "Đăng ký tài khoản thành công");
     }
@@ -58,20 +58,22 @@ public class AuthServiceImpl implements AuthService {
                     "Tài khoản đã bị khóa hoặc chưa được kích hoạt!"
             );
         }
-        String accessToken = jwtUtils.generateAccessToken(user.getEmail(), user.getRole().name());
-        String refreshToken = jwtUtils.generateRefreshToken(user.getEmail());
+        String accessToken = jwtUtils.generateAccessToken(user.getEmail(), user.getRole().name(),user.getAuthVersion());
+        String refreshToken = jwtUtils.generateRefreshToken(user.getEmail(),user.getAuthVersion());
 
         return buildAuthResponse(user, accessToken, refreshToken, "Đăng nhập thành công");
     }
 
     @Override
     public AuthResponse refreshToken(String refreshToken) {
+        // 1. Kiểm tra loại token, chữ ký và hạn sử dụng.
         if (!jwtUtils.validateRefreshToken(refreshToken)) {
             throw new RuntimeException(
                     "Refresh Token không hợp lệ hoặc đã hết hạn!"
             );
         }
 
+        // 2. Lấy email và tìm user trước.
         String email = jwtUtils.getEmailFromToken(refreshToken);
 
         User user = userRepository.findByEmail(email)
@@ -79,15 +81,27 @@ public class AuthServiceImpl implements AuthService {
                         new RuntimeException("Không tìm thấy người dùng!")
                 );
 
+        // 3. Sau khi có user mới kiểm tra phiên đăng nhập.
+        if (!jwtUtils.matchesAuthVersion(
+                refreshToken,
+                user.getAuthVersion()
+        )) {
+            throw new RuntimeException(
+                    "Phiên đăng nhập đã hết hiệu lực. Vui lòng đăng nhập lại."
+            );
+        }
+
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new RuntimeException(
                     "Tài khoản đã bị khóa hoặc chưa được kích hoạt!"
             );
         }
 
+        // 4. Cấp access token mới với phiên bản hiện tại.
         String newAccessToken = jwtUtils.generateAccessToken(
                 user.getEmail(),
-                user.getRole().name()
+                user.getRole().name(),
+                user.getAuthVersion()
         );
 
         return AuthResponse.builder()

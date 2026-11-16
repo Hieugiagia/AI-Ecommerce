@@ -1,19 +1,27 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Star, ShoppingCart, Check, Sparkles, Flame } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
 export default function ProductCard({ product, isFlashSale = false, soldCount = 45 }) {
-  const { addToCart } = useCart();
+  const { addToCart, cartBusy } = useCart();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [addError, setAddError] = useState('');
   const [isAdded, setIsAdded] = useState(false);
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(product, 1, product.variants?.[0] || null, product.colors?.[0] || null);
-    setIsAdded(true);
-    setTimeout(() => setIsAdded(false), 1500);
+    setAddError('');
+    const result = await addToCart(product);
+    if (result.requiresAuth) {
+      navigate('/login', { state: { from: { pathname: location.pathname, search: location.search } } });
+    } else if (result.success) {
+      setIsAdded(true);
+      setTimeout(() => setIsAdded(false), 1500);
+    } else setAddError(result.error);
   };
 
   const formatVND = (price) => {
@@ -147,7 +155,7 @@ export default function ProductCard({ product, isFlashSale = false, soldCount = 
         <motion.button
           whileTap={{ scale: 0.96 }}
           onClick={handleAddToCart}
-          disabled={isAdded}
+          disabled={isAdded || cartBusy || product.stock === 0 || product.status === 'OUT_OF_STOCK'}
           className={`w-full py-2 px-3 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs ${
             isAdded
               ? 'bg-emerald-600 text-white shadow-emerald-500/20'
@@ -163,10 +171,11 @@ export default function ProductCard({ product, isFlashSale = false, soldCount = 
           ) : (
             <>
               <ShoppingCart className="w-3.5 h-3.5" />
-              <span>Thêm vào giỏ</span>
+              <span>{product.stock === 0 || product.status === 'OUT_OF_STOCK' ? 'Hết hàng' : 'Thêm vào giỏ'}</span>
             </>
           )}
         </motion.button>
+        {addError && <p role="alert" className="mt-2 text-xs text-rose-700">{addError}</p>}
       </div>
     </motion.div>
   );

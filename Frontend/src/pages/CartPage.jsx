@@ -1,50 +1,43 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Trash2,
   ArrowRight,
   ShoppingBag,
-  Sparkles,
-  Tag,
   ShieldCheck,
   Check,
   ChevronLeft,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import { VOUCHERS } from '../data/mockData';
 
 export default function CartPage() {
   const {
-    cart,
+    cart, cartLoading, cartBusy, cartError, canCheckout, reloadCart,
     subtotal,
     discountAmount,
     shippingFee,
     total,
-    appliedVoucher,
-    voucherError,
     updateQuantity,
     removeFromCart,
     clearCart,
-    applyVoucher,
-    removeVoucher,
   } = useCart();
   const { isAuthenticated } = useAuth();
 
-  const [couponCode, setCouponCode] = useState('');
   const navigate = useNavigate();
 
   const formatVND = (price) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
   };
 
-  const handleApplyVoucher = (e) => {
-    e.preventDefault();
-    if (applyVoucher(couponCode)) {
-      setCouponCode('');
-    }
-  };
+  if (!isAuthenticated) {
+    return <div className="p-12 text-center space-y-4"><h1 className="text-xl font-bold">Đăng nhập để xem giỏ hàng</h1><Link className="text-indigo-600 underline" to="/login" state={{ from: { pathname: '/cart' } }}>Đăng nhập</Link></div>;
+  }
+  if (cartLoading) return <p role="status" className="p-12 text-center">Đang tải giỏ hàng...</p>;
+  if (cartError && !cart.length) {
+    return <div role="alert" className="p-12 text-center text-rose-700"><p>{cartError}</p><button disabled={cartBusy} className="mt-4 underline" onClick={reloadCart}>Tải lại giỏ hàng</button></div>;
+  }
 
   if (cart.length === 0) {
     return (
@@ -79,6 +72,8 @@ export default function CartPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+      {cartError && <div role="alert" className="mb-4 rounded-xl bg-rose-50 p-4 text-rose-700"><p>{cartError}</p><button disabled={cartBusy} className="underline" onClick={reloadCart}>Tải lại giỏ hàng</button></div>}
+      {cartBusy && <p role="status" className="mb-4 text-sm">Đang cập nhật giỏ hàng...</p>}
       {/* Tiêu đề & Nút quay lại */}
       <div className="flex items-center justify-between mb-8">
         <div>
@@ -95,6 +90,7 @@ export default function CartPage() {
 
         <button
           onClick={clearCart}
+          disabled={cartBusy}
           className="text-xs font-semibold text-rose-500 hover:text-rose-700 cursor-pointer"
         >
           Xóa tất cả
@@ -181,6 +177,7 @@ export default function CartPage() {
                         </span>
                       )}
                     </div>
+                    {!item.available && <p className="mt-2 text-xs text-rose-700">Sản phẩm ngừng bán hoặc không đủ tồn kho. Vui lòng giảm số lượng hoặc xóa khỏi giỏ.</p>}
                     <div className="text-sm font-bold text-slate-900 mt-2">
                       {formatVND(item.unitPrice)}
                     </div>
@@ -189,7 +186,8 @@ export default function CartPage() {
                   {/* Bộ đếm số lượng */}
                   <div className="flex items-center border border-slate-200 rounded-full overflow-hidden bg-slate-50 shadow-2xs">
                     <button
-                      onClick={() => updateQuantity(item.key, -1)}
+                      disabled={cartBusy}
+                      onClick={() => updateQuantity(item.key, Math.max(0, Math.min(item.quantity - 1, item.stock)) - item.quantity)}
                       className="px-3 py-1 text-slate-600 hover:bg-slate-200 transition-colors font-bold cursor-pointer"
                     >
                       -
@@ -198,6 +196,7 @@ export default function CartPage() {
                       {item.quantity}
                     </span>
                     <button
+                      disabled={cartBusy || !item.available || item.quantity >= item.stock}
                       onClick={() => updateQuantity(item.key, 1)}
                       className="px-3 py-1 text-slate-600 hover:bg-slate-200 transition-colors font-bold cursor-pointer"
                     >
@@ -207,6 +206,7 @@ export default function CartPage() {
 
                   {/* Nút xóa */}
                   <button
+                    disabled={cartBusy}
                     onClick={() => removeFromCart(item.key)}
                     className="p-2.5 text-slate-400 hover:text-rose-600 rounded-full hover:bg-rose-50 transition-colors cursor-pointer"
                     title="Xóa khỏi giỏ"
@@ -225,64 +225,6 @@ export default function CartPage() {
             <h2 className="text-lg font-bold text-slate-900 pb-3 border-b border-slate-100">
               Tóm tắt đơn hàng
             </h2>
-
-            {/* Voucher input */}
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                Mã giảm giá / Voucher AI
-              </label>
-              <form onSubmit={handleApplyVoucher} className="flex gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                    placeholder="VD: AITECH10, FREESHIP"
-                    className="w-full bg-slate-50 border border-slate-200 text-xs sm:text-sm pl-9 pr-3 py-2.5 rounded-full uppercase outline-none focus:border-indigo-500 focus:bg-white text-slate-800"
-                  />
-                  <Tag className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                </div>
-                <button
-                  type="submit"
-                  className="px-4 py-2.5 bg-slate-900 hover:bg-indigo-600 text-white rounded-full text-xs font-semibold transition-all cursor-pointer shadow-xs"
-                >
-                  Áp dụng
-                </button>
-              </form>
-
-              {/* Thông báo lỗi hoặc mã thành công */}
-              {voucherError && (
-                <p className="text-xs text-rose-500 mt-1.5 font-medium">{voucherError}</p>
-              )}
-
-              {appliedVoucher && (
-                <div className="mt-2.5 p-3 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center justify-between text-xs text-emerald-800">
-                  <div>
-                    <span className="font-bold">{appliedVoucher.code}</span>: {appliedVoucher.description}
-                  </div>
-                  <button
-                    onClick={removeVoucher}
-                    className="text-emerald-700 hover:text-rose-600 font-bold ml-2 cursor-pointer"
-                  >
-                    Xóa
-                  </button>
-                </div>
-              )}
-
-              {/* Gợi ý mã có sẵn */}
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                <span className="text-[11px] text-slate-400 self-center">Mã gợi ý:</span>
-                {VOUCHERS.map((v) => (
-                  <button
-                    key={v.code}
-                    onClick={() => applyVoucher(v.code)}
-                    className="text-[10px] font-bold bg-slate-100 hover:bg-indigo-50 text-indigo-700 border border-slate-200 hover:border-indigo-200 px-2.5 py-0.5 rounded-full cursor-pointer transition-colors"
-                  >
-                    {v.code}
-                  </button>
-                ))}
-              </div>
-            </div>
 
             {/* Chi tiết tính tiền */}
             <div className="space-y-3 pt-4 border-t border-slate-100 text-xs sm:text-sm">
@@ -309,10 +251,12 @@ export default function CartPage() {
               </div>
             </div>
 
+            {!canCheckout && <p className="text-sm text-amber-700">Vui lòng xử lý các sản phẩm không khả dụng và lỗi giỏ hàng trước khi đặt hàng.</p>}
             {/* Nút Đặt hàng */}
             <motion.button
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
+              disabled={!canCheckout}
               onClick={() => {
                 if (!isAuthenticated) {
                   navigate('/login', { state: { from: { pathname: '/checkout' } } });

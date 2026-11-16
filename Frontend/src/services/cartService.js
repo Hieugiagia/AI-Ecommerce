@@ -2,7 +2,7 @@ import { apiRequest } from './api';
 
 /**
  * Cart Service
- * Khớp chuẩn 100% với Router /cart và /cart/items của Backend:
+ * Kết nối Router /cart và /cart/items của Backend:
  * - GET    /cart                  : Xem giỏ hàng của user
  * - DELETE /cart/clear            : Xóa toàn bộ giỏ hàng
  * - POST   /cart/items            : Thêm vào giỏ hàng
@@ -30,12 +30,12 @@ export const cartService = {
   /**
    * Thêm sản phẩm vào giỏ hàng
    * POST /cart/items
-   * @param {Object} itemData - { productId, quantity, variant, color }
+   * @param {Object} itemData - { productId, quantity }
    */
   async addItem(itemData) {
     return await apiRequest('/cart/items', {
       method: 'POST',
-      body: itemData,
+      body: { productId: itemData.productId, quantity: itemData.quantity },
     });
   },
 

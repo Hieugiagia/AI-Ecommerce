@@ -10,7 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "orders")
+@Table(name = "orders", uniqueConstraints = {@UniqueConstraint(name = "uq_order_user_checkout",
+                        columnNames = {"user_id", "checkout_key"})})
 @Getter
 @Setter
 @NoArgsConstructor
@@ -48,6 +49,19 @@ public class Order extends BaseEntity {
 
     @Column(name = "note", length = 500)
     private String note;
+
+    // Mã đại diện cho một lần checkout.
+    // Gửi lại cùng mã sẽ trả đơn đã tạo, không tạo đơn mới.
+    @Column(name = "checkout_key", length = 36)
+    private String checkoutKey;
+
+    // Snapshot tiền hàng tại thời điểm đặt.
+    @Column(name = "subtotal_amount", precision = 15, scale = 2)
+    private BigDecimal subtotalAmount;
+
+    // Snapshot phí giao hàng tại thời điểm đặt.
+    @Column(name = "shipping_fee", precision = 15, scale = 2)
+    private BigDecimal shippingFee;
 
     // Quan hệ 1 Order có nhiều OrderItem con
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

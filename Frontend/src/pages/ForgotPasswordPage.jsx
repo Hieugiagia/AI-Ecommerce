@@ -1,19 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, ShieldCheck, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Mail, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 import { authService } from '../services/authService';
 import BrandLogo from '../components/BrandLogo';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
+  const submitting = useRef(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || submitting.current) return;
+    submitting.current = true;
 
     setError('');
     setLoading(true);
@@ -28,6 +30,8 @@ export default function ForgotPasswordPage() {
       } else {
         setError(err.message || 'Không thể gửi yêu cầu đặt lại mật khẩu. Vui lòng thử lại sau.');
       }
+    } finally {
+      submitting.current = false;
     }
   };
 
@@ -50,7 +54,7 @@ export default function ForgotPasswordPage() {
             Khôi phục mật khẩu
           </h2>
           <p className="text-xs sm:text-sm text-slate-500">
-            Nhập địa chỉ email liên kết với tài khoản để nhận mã OTP hoặc đường dẫn khôi phục
+            Nhập email đăng ký để nhận liên kết đặt lại mật khẩu, có hiệu lực trong 15 phút.
           </p>
         </div>
 
@@ -66,7 +70,7 @@ export default function ForgotPasswordPage() {
             <div className="space-y-1">
               <h3 className="text-base font-bold text-slate-900">Kiểm tra hộp thư của bạn</h3>
               <p className="text-xs sm:text-sm text-slate-500">
-                Chúng tôi đã gửi hướng dẫn đặt lại mật khẩu đến{' '}
+                Nếu email này thuộc tài khoản đang hoạt động, bạn sẽ nhận được liên kết đặt lại mật khẩu tại{' '}
                 <span className="font-semibold text-slate-900">{email}</span>.
               </p>
             </div>
@@ -83,7 +87,7 @@ export default function ForgotPasswordPage() {
               onClick={() => setIsSubmitted(false)}
               className="text-xs font-semibold text-indigo-600 hover:underline cursor-pointer"
             >
-              Chưa nhận được email? Gửi lại
+              Chưa nhận được? Kiểm tra thư rác hoặc thử lại sau 60 giây
             </button>
           </div>
         ) : (
@@ -108,6 +112,9 @@ export default function ForgotPasswordPage() {
                 <input
                   type="email"
                   required
+                  maxLength={150}
+                  autoComplete="email"
+                  disabled={loading}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@example.com"
@@ -128,7 +135,7 @@ export default function ForgotPasswordPage() {
                 <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <span>Gửi mã khôi phục</span>
+                  <span>Gửi liên kết khôi phục</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}

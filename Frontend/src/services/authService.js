@@ -89,6 +89,13 @@ export const authService = {
    * POST /auth/forgot-password
    * @param {string} email
    */
+  async resetPassword(token, newPassword) {
+    return await apiRequest('/auth/reset-password', {
+      method: 'POST',
+      body: { token, newPassword },
+    });
+  },
+
   async forgotPassword(email) {
     return await apiRequest('/auth/forgot-password', {
       method: 'POST',

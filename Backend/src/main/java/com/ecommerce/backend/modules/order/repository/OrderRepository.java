@@ -17,4 +17,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Page<Order> findByUserId(Long userId, Pageable pageable);
     //loc danh sach don hang cho admin theo trang thai
     Page<Order> findByStatus(OrderStatus status, Pageable pageable);
+
+    Optional<Order> findByUserIdAndCheckoutKey(Long userId, String checkoutKey);
 }
