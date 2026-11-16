@@ -15,6 +15,16 @@ export function AuthProvider({ children }) {
   });
   const [loading, setLoading] = useState(false);
 
+  // Drop the current account when the API client rejects its session.
+  useEffect(() => {
+    const clearSession = () => {
+      setToken(null);
+      setUser(null);
+    };
+    window.addEventListener('auth:unauthorized', clearSession);
+    return () => window.removeEventListener('auth:unauthorized', clearSession);
+  }, []);
+
   // Lưu trạng thái vào localStorage khi có thay đổi
   useEffect(() => {
     try {

@@ -24,7 +24,13 @@ public enum ErrorCode {
     PRODUCT_BRAND_NOT_SUPPORTED(2009, "Bộ lọc thương hiệu chưa được hỗ trợ", HttpStatus.BAD_REQUEST),
     CART_ITEM_NOT_FOUND(3001, "Không tìm thấy mục trong giỏ hàng", HttpStatus.NOT_FOUND),
     PRODUCT_NOT_AVAILABLE(3002, "Sản phẩm hiện không được mở bán", HttpStatus.BAD_REQUEST),
-    CART_STOCK_EXCEEDED(3003, "Số lượng yêu cầu vượt quá tồn kho", HttpStatus.CONFLICT)
+    CART_STOCK_EXCEEDED(3003, "Số lượng yêu cầu vượt quá tồn kho", HttpStatus.CONFLICT),
+    CART_EMPTY(4001, "Giỏ hàng đang trống", HttpStatus.BAD_REQUEST),
+    CHECKOUT_PAYMENT_NOT_SUPPORTED(4002, "Hiện chỉ hỗ trợ thanh toán COD", HttpStatus.BAD_REQUEST),
+    CHECKOUT_TOTAL_CHANGED(4003, "Tổng tiền đã thay đổi. Vui lòng tải lại giỏ hàng và xác nhận lại", HttpStatus.CONFLICT),
+    CHECKOUT_AMOUNT_INVALID(4004, "Tổng tiền đơn hàng vượt giới hạn cho phép", HttpStatus.BAD_REQUEST),
+    RESET_TOKEN_INVALID(5001, "Liên kết khôi phục không hợp lệ, đã hết hạn hoặc đã được sử dụng", HttpStatus.BAD_REQUEST),
+    RESET_PASSWORD_INVALID(5002, "Mật khẩu phải từ 8 ký tự và không vượt quá 72 byte", HttpStatus.BAD_REQUEST)
     ;
 
     ErrorCode(int code, String message, HttpStatusCode httpStatusCode) {

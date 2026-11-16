@@ -9,15 +9,13 @@ import {
   Banknote,
   CheckCircle2,
   ArrowRight,
-  Sparkles,
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { orderService } from '../services/orderService';
-import { paymentService } from '../services/paymentService';
 
 export default function CheckoutPage() {
-  const { cart, subtotal, discountAmount, shippingFee, total, clearCart } = useCart();
+  const { cart, subtotal, discountAmount, shippingFee, total, clearCart, cartLoading, cartBusy, cartError, canCheckout } = useCart();
   const { user, isAuthenticated, addOrder } = useAuth();
   const navigate = useNavigate();
 
@@ -31,9 +29,11 @@ export default function CheckoutPage() {
     notes: 'Giao giờ hành chính giúp mình nhé.',
   });
 
-  const [paymentMethod, setPaymentMethod] = useState('vietqr');
+  const [paymentMethod, setPaymentMethod] = useState('cod');
   const [isSuccess, setIsSuccess] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState('');
+  const [placingOrder, setPlacingOrder] = useState(false);
+  const [orderError, setOrderError] = useState('');
 
   if (!isAuthenticated) {
     return (
@@ -86,12 +86,13 @@ export default function CheckoutPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const [placingOrder, setPlacingOrder] = useState(false);
-  const [orderError, setOrderError] = useState('');
-
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
-    if (cart.length === 0) return;
+    if (placingOrder || !canCheckout) return;
+    if (paymentMethod !== 'cod') {
+      setOrderError('Thanh toán trực tuyến chưa khả dụng. Vui lòng chọn COD.');
+      return;
+    }
 
     setPlacingOrder(true);
     setOrderError('');
@@ -120,27 +121,13 @@ export default function CheckoutPage() {
           : 'Thẻ tín dụng / Ghi nợ',
     };
 
-    let serverOrderId = 'ORD-' + Math.floor(100000 + Math.random() * 900000);
+    let serverOrderId;
 
     try {
       // 1. Gọi POST /orders/checkout
       const orderRes = await orderService.checkout(orderPayload);
-      if (orderRes?.orderCode || orderRes?.id || orderRes?.order?.id) {
-        serverOrderId = orderRes.orderCode || orderRes.id || orderRes.order.id;
-      }
-
-      // 2. Nếu thanh toán online, gọi POST /payments/process
-      if (paymentMethod !== 'cod') {
-        try {
-          await paymentService.processPayment({
-            orderCode: serverOrderId,
-            amount: total,
-            paymentMethod,
-          });
-        } catch (payErr) {
-          console.warn('Xử lý thanh toán:', payErr);
-        }
-      }
+      serverOrderId = orderRes?.orderCode || orderRes?.id || orderRes?.order?.id;
+      if (!serverOrderId) throw new Error('Máy chủ chưa xác nhận đơn hàng.');
 
       const newOrder = {
         id: serverOrderId,
@@ -158,28 +145,10 @@ export default function CheckoutPage() {
 
       addOrder(newOrder);
       setCreatedOrderId(serverOrderId);
-      clearCart();
+      await clearCart();
       setIsSuccess(true);
     } catch (err) {
-      console.error('Lỗi đặt hàng:', err);
-      // Fallback lưu local khi server chưa bật
-      const fallbackOrder = {
-        id: serverOrderId,
-        orderCode: serverOrderId,
-        date: new Date().toISOString().split('T')[0],
-        items: cart,
-        subtotal,
-        discountAmount,
-        shippingFee,
-        total,
-        shippingInfo: formData,
-        paymentMethod: orderPayload.paymentMethod,
-        status: 'Chờ xác nhận',
-      };
-      addOrder(fallbackOrder);
-      setCreatedOrderId(serverOrderId);
-      clearCart();
-      setIsSuccess(true);
+      setOrderError(err.message || 'Không thể đặt hàng. Giỏ hàng được giữ nguyên.');
     } finally {
       setPlacingOrder(false);
     }
@@ -246,6 +215,9 @@ export default function CheckoutPage() {
     );
   }
 
+  if (cartLoading) return <p role="status" className="p-12 text-center">Đang tải giỏ hàng...</p>;
+  if (cartError) return <div role="alert" className="p-12 text-center"><p>{cartError}</p><Link to="/cart" className="text-indigo-600 underline">Quay lại giỏ hàng để tải lại</Link></div>;
+
   if (cart.length === 0) {
     return (
       <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
@@ -270,6 +242,8 @@ export default function CheckoutPage() {
         </p>
       </div>
 
+      {orderError && <p role="alert" className="mb-4 text-rose-700">{orderError}</p>}
+      {!canCheckout && <p className="mb-4 text-amber-700">Giỏ hàng có sản phẩm không khả dụng hoặc đang cập nhật. Vui lòng kiểm tra lại.</p>}
       <form onSubmit={handlePlaceOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-10">
         {/* CỘT TRÁI: Form Địa chỉ & Phương thức thanh toán (7 cột) */}
         <div className="lg:col-span-7 space-y-8">
@@ -538,9 +512,10 @@ export default function CheckoutPage() {
               whileHover={{ scale: 1.01 }}
               whileTap={{ scale: 0.98 }}
               type="submit"
+              disabled={placingOrder || cartBusy || !canCheckout}
               className="w-full py-4 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl text-sm font-bold shadow-lg shadow-indigo-500/25 transition-all cursor-pointer flex items-center justify-center gap-2"
             >
-              <span>Xác nhận đặt hàng</span>
+              <span>{placingOrder ? 'Đang đặt hàng...' : 'Xác nhận đặt hàng'}</span>
               <ArrowRight className="w-4 h-4" />
             </motion.button>
 

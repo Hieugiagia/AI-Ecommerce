@@ -67,7 +67,9 @@ public class SecurityConfig {
                                 HttpMethod.POST,
                                 "/auth/register",
                                 "/auth/login",
-                                "/auth/refresh-token"
+                                "/auth/refresh-token",
+                                "/auth/forgot-password",
+                                "/auth/reset-password"
                         )
                         .permitAll()
 

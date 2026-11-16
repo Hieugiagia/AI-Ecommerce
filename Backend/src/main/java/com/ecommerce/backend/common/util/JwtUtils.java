@@ -28,27 +28,39 @@ public class JwtUtils {
         );
     }
 
-    public String generateAccessToken(String email, String role) {
+    public String generateAccessToken(String email, String role, Long authVersion) {
         return Jwts.builder()
                 .subject(email)
                 .claim("type", "access")
                 .claim("role", role)
+                .claim("authVersion", authVersion)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessExpiration))
                 .signWith(getSigningKey())
                 .compact();
     }
 
-    public String generateRefreshToken(String email) {
+    public String generateRefreshToken(String email,  Long authVersion) {
         return Jwts.builder()
                 .subject(email)
                 .claim("type", "refresh")
+                .claim("authVersion", authVersion)
                 .issuedAt(new Date())
                 .expiration(
                         new Date(System.currentTimeMillis() + refreshExpiration)
                 )
                 .signWith(getSigningKey())
                 .compact();
+    }
+
+    public boolean matchesAuthVersion(String token, Long currentVersion) {
+        try {
+            Number tokenVersion = extractAllClaims(token).get("authVersion", Number.class);
+
+            return tokenVersion != null && currentVersion != null && tokenVersion.longValue() == currentVersion.longValue();
+        } catch (Exception exception) {
+            return false;
+        }
     }
 
     public String getEmailFromToken(String token) {

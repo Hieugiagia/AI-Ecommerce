@@ -74,6 +74,7 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {new URLSearchParams(location.search).get('passwordReset') === 'success' && <p role="status" className="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-800">Đã đổi mật khẩu. Hãy đăng nhập bằng mật khẩu mới.</p>}
         {/* Thông báo lỗi */}
         {error && (
           <motion.div
