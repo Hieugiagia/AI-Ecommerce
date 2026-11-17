@@ -1,6 +1,6 @@
 import { apiRequest } from './api';
 import { checkoutPayload, normalizeCheckout } from './checkoutModel';
-import { normalizeOrder, normalizeOrderList, orderListQuery, cancellationReason } from './orderModel';
+import { normalizeOrder, normalizeOrderList, orderListQuery, cancellationReason, normalizeAdminOrder, normalizeAdminOrderList, adminOrderListQuery, adminStatusPayload } from './orderModel';
 
 /**
  * Order Service
@@ -9,8 +9,8 @@ import { normalizeOrder, normalizeOrderList, orderListQuery, cancellationReason 
  * - GET   /orders/my-orders           : Xem danh sách đơn đã mua của khách hàng
  * - GET   /orders/{orderCode}         : Xem chi tiết 1 đơn hàng
  * - POST  /orders/{orderCode}/cancel  : Hủy 1 đơn hàng
- * - PATCH /orders/{orderCode}/status  : Cập nhật trạng thái đơn hàng (Admin)
- * - GET   /orders                     : Xem toàn bộ đơn hàng hệ thống (Admin)
+ * - PATCH /admin/orders/{orderCode}/status  : Cập nhật trạng thái đơn hàng (Admin)
+ * - GET   /admin/orders               : Xem toàn bộ đơn hàng hệ thống (Admin)
  */
 
 export const orderService = {
@@ -64,28 +64,31 @@ export const orderService = {
     return order;
   },
 
-  /**
-   * Cập nhật trạng thái của đơn hàng (Dành cho Admin)
-   * PATCH /orders/{orderCode}/status
-   * @param {string} orderCode
-   * @param {string} status - 'pending' | 'processing' | 'shipping' | 'delivered' | 'cancelled'
-   */
-  async updateOrderStatus(orderCode, status) {
-    return await apiRequest(`/orders/${orderCode}/status`, {
-      method: 'PATCH',
-      body: { status },
-    });
+  async getAllOrders(params = {}) {
+    const query = adminOrderListQuery(params);
+    const data = await apiRequest('/admin/orders?' + query, { method: 'GET' });
+    return normalizeAdminOrderList(data);
   },
 
-  /**
-   * Lấy toàn bộ đơn hàng (Dành cho Admin)
-   * GET /orders
-   */
-  async getAllOrders() {
-    return await apiRequest('/orders', {
-      method: 'GET',
-    });
+  async getAdminOrderByCode(orderCode) {
+    const data = await apiRequest(`/admin/orders/${encodeURIComponent(orderCode)}`, { method: 'GET' });
+    return normalizeAdminOrder(data);
   },
+
+  async updateOrderStatus(orderCode, request) {
+    const payload = adminStatusPayload(request);
+    const data = await apiRequest(`/admin/orders/${encodeURIComponent(orderCode)}/status`, {
+      method: 'PATCH',
+      body: payload,
+    });
+    const confirmed = normalizeAdminOrder(data);
+    if (confirmed.order.status !== payload.status
+        || (payload.status === 'DELIVERED' && confirmed.order.paymentStatus !== 'SUCCESS')) {
+      throw new Error('Chưa nhận được xác nhận trạng thái phù hợp. Vui lòng tải lại đơn để kiểm tra.');
+    }
+    return confirmed;
+  },
+
 };
 
 export default orderService;
