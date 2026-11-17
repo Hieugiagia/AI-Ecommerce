@@ -4,20 +4,14 @@ import { motion } from 'framer-motion';
 import {
   User,
   Package,
-  MapPin,
-  Phone,
-  Mail,
   LogOut,
   Sparkles,
-  ChevronRight,
-  Clock,
-  CheckCircle2,
-  Truck,
   ArrowRight,
   ShieldCheck,
   Check,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import OrdersPage from './OrdersPage';
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isAdmin, logout } = useAuth();
@@ -31,10 +25,6 @@ export default function ProfilePage() {
     address: user?.address || '',
   });
   const [isSaved, setIsSaved] = useState(false);
-
-  const formatVND = (price) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
-  };
 
   if (!isAuthenticated) {
     return (
@@ -68,7 +58,6 @@ export default function ProfilePage() {
     setTimeout(() => setIsSaved(false), 2000);
   };
 
-  const orders = user.orders || [];
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
@@ -143,7 +132,7 @@ export default function ProfilePage() {
           }`}
         >
           <Package className="w-4 h-4" />
-          <span>Đơn hàng của tôi ({orders.length})</span>
+          <span>Đơn hàng của tôi</span>
         </button>
 
         <button
@@ -160,45 +149,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Tab Content */}
-      {activeTab === 'orders' && (
-        <div className="space-y-4">
-          {orders.length === 0 ? (
-            <div className="p-12 bg-white border border-slate-200/80 rounded-3xl text-center space-y-4 shadow-sm">
-              <p className="text-sm text-slate-500">Bạn chưa có đơn hàng nào.</p>
-              <Link
-                to="/products"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-full text-xs font-semibold shadow-md"
-              >
-                <span>Khám phá sản phẩm</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-          ) : (
-            orders.map((o) => (
-              <div
-                key={o.id}
-                className="p-5 sm:p-6 bg-white border border-slate-200/80 rounded-3xl shadow-xs space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-slate-900">Mã đơn: #{o.id}</span>
-                    <span className="text-xs text-slate-400">• {o.date}</span>
-                  </div>
-                  <span className="text-xs font-bold px-3 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
-                    {o.status}
-                  </span>
-                </div>
-                <div className="text-xs text-slate-600">
-                  Tổng tiền:{' '}
-                  <strong className="text-indigo-600 font-extrabold text-sm">
-                    {formatVND(o.total)}
-                  </strong>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
+      {activeTab === 'orders' && <OrdersPage embedded />}
 
       {activeTab === 'info' && (
         <div className="p-6 sm:p-8 bg-white border border-slate-200/80 rounded-3xl shadow-sm max-w-2xl space-y-6">

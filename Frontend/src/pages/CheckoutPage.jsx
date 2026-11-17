@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   ShieldCheck,
   Truck,
   CreditCard,
-  QrCode,
   Banknote,
   CheckCircle2,
   ArrowRight,
@@ -13,27 +12,32 @@ import {
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { orderService } from '../services/orderService';
+import { checkoutPayload, checkoutRejected } from '../services/checkoutModel';
 
 export default function CheckoutPage() {
-  const { cart, subtotal, discountAmount, shippingFee, total, clearCart, cartLoading, cartBusy, cartError, canCheckout } = useCart();
-  const { user, isAuthenticated, addOrder } = useAuth();
+  const {
+    cart, subtotal, shippingFee, total, cartLoading, cartBusy, cartError, canCheckout,
+    reloadCart, pendingCheckout, beginCheckout, finishCheckout,
+  } = useCart();
+  const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
-
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(() => pendingCheckout?.shippingInfo || ({
     fullName: user?.fullName || '',
-    email: user?.email || '',
     phone: user?.phone || '',
-    province: 'Hồ Chí Minh',
-    district: 'Quận Bình Thạnh',
+    province: '',
+    district: '',
     address: user?.address || '',
-    notes: 'Giao giờ hành chính giúp mình nhé.',
-  });
-
-  const [paymentMethod, setPaymentMethod] = useState('cod');
-  const [isSuccess, setIsSuccess] = useState(false);
-  const [createdOrderId, setCreatedOrderId] = useState('');
+    notes: '',
+  }));
+  const [receipt, setReceipt] = useState(null);
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderError, setOrderError] = useState('');
+  const submitting = useRef(false);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   if (!isAuthenticated) {
     return (
@@ -78,141 +82,77 @@ export default function CheckoutPage() {
     );
   }
 
-  const formatVND = (price) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
-  };
+  const formatVND = (price) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
+  const handleChange = (event) => setFormData({ ...formData, [event.target.name]: event.target.value });
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handlePlaceOrder = async (e) => {
-    e.preventDefault();
-    if (placingOrder || !canCheckout) return;
-    if (paymentMethod !== 'cod') {
-      setOrderError('Thanh toán trực tuyến chưa khả dụng. Vui lòng chọn COD.');
-      return;
-    }
-
+  async function submitCheckout(payload) {
+    if (submitting.current) return;
+    submitting.current = true;
     setPlacingOrder(true);
     setOrderError('');
-
-    const orderPayload = {
-      items: cart.map((item) => ({
-        productId: item.id,
-        name: item.name,
-        quantity: item.quantity,
-        price: item.unitPrice || item.price,
-        variant: item.variant,
-        color: item.color,
-      })),
-      subtotal,
-      discountAmount,
-      shippingFee,
-      total,
-      shippingInfo: formData,
-      paymentMethod:
-        paymentMethod === 'vietqr'
-          ? 'Chuyển khoản VietQR'
-          : paymentMethod === 'cod'
-          ? 'Thanh toán khi nhận hàng (COD)'
-          : paymentMethod === 'momo'
-          ? 'Ví điện tử MoMo'
-          : 'Thẻ tín dụng / Ghi nợ',
-    };
-
-    let serverOrderId;
-
     try {
-      // 1. Gọi POST /orders/checkout
-      const orderRes = await orderService.checkout(orderPayload);
-      serverOrderId = orderRes?.orderCode || orderRes?.id || orderRes?.order?.id;
-      if (!serverOrderId) throw new Error('Máy chủ chưa xác nhận đơn hàng.');
-
-      const newOrder = {
-        id: serverOrderId,
-        orderCode: serverOrderId,
-        date: new Date().toISOString().split('T')[0],
-        items: cart,
-        subtotal,
-        discountAmount,
-        shippingFee,
-        total,
-        shippingInfo: formData,
-        paymentMethod: orderPayload.paymentMethod,
-        status: 'Chờ xác nhận',
-      };
-
-      addOrder(newOrder);
-      setCreatedOrderId(serverOrderId);
-      await clearCart();
-      setIsSuccess(true);
-    } catch (err) {
-      setOrderError(err.message || 'Không thể đặt hàng. Giỏ hàng được giữ nguyên.');
+      const confirmed = await orderService.checkout(payload);
+      if (!mounted.current) return;
+      setReceipt(confirmed);
+      finishCheckout();
+      // The backend has already cleared the cart transactionally.
+      // Only GET it again; a separate DELETE could remove newly added items.
+      await reloadCart();
+    } catch (error) {
+      if (!mounted.current) return;
+      if (checkoutRejected(error)) {
+        finishCheckout();
+        setOrderError(error.message || 'Máy chủ từ chối đơn hàng. Vui lòng kiểm tra lại.');
+        await reloadCart();
+      } else {
+        setOrderError('Chưa nhận được kết quả chắc chắn. Hãy kiểm tra lại bên dưới để tránh đặt trùng đơn. ' + (error.message || ''));
+      }
     } finally {
-      setPlacingOrder(false);
+      submitting.current = false;
+      if (mounted.current) setPlacingOrder(false);
     }
-  };
+  }
 
-  if (isSuccess) {
-    return (
-      <div className="max-w-2xl mx-auto px-4 py-16 text-center space-y-6">
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="w-20 h-20 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-3xl flex items-center justify-center mx-auto shadow-sm"
-        >
-          <CheckCircle2 className="w-12 h-12" />
-        </motion.div>
-        <div className="space-y-2">
-          <span className="text-xs font-bold text-emerald-600 uppercase tracking-wider">
-            Đặt hàng thành công!
-          </span>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-            Cảm ơn bạn đã mua hàng tại Alibaba-Store
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-500">
-            Mã đơn hàng của bạn là <span className="font-bold text-slate-900">#{createdOrderId}</span>.
-            Thông tin chi tiết đã được gửi tới email <span className="font-medium text-slate-900">{formData.email}</span>.
-          </p>
-        </div>
+  function handlePlaceOrder(event) {
+    event.preventDefault();
+    if (submitting.current || !canCheckout) return;
+    try {
+      const payload = checkoutPayload(crypto.randomUUID(), total, formData);
+      const attempt = beginCheckout(payload);
+      if (!attempt.success) { setOrderError(attempt.error); return; }
+      void submitCheckout(attempt.payload);
+    } catch (error) {
+      setOrderError(error.message);
+    }
+  }
 
-        {paymentMethod === 'vietqr' && (
-          <div className="p-6 bg-slate-50 border border-slate-200/80 rounded-3xl max-w-sm mx-auto space-y-4 text-center">
-            <p className="text-xs font-semibold text-slate-700">Quét mã VietQR để hoàn tất thanh toán</p>
-            <div className="p-3 bg-white rounded-2xl border border-slate-200 inline-block shadow-xs">
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=ALIBABA-${createdOrderId}-${total}`}
-                alt="VietQR"
-                className="w-44 h-44 object-contain"
-              />
-            </div>
-            <div className="text-[11px] text-slate-500 space-y-0.5">
-              <p>Ngân hàng: <span className="font-bold text-slate-800">MB Bank</span></p>
-              <p>Số TK: <span className="font-bold text-slate-800">09012345688</span></p>
-              <p>Số tiền: <span className="font-bold text-indigo-600">{formatVND(total)}</span></p>
-              <p>Nội dung: <span className="font-bold text-slate-800">{createdOrderId}</span></p>
-            </div>
-          </div>
-        )}
-
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
-          <Link
-            to="/profile"
-            className="w-full sm:w-auto px-6 py-3 bg-slate-900 hover:bg-indigo-600 text-white rounded-full text-sm font-semibold transition-all shadow-md"
-          >
-            Quản lý đơn hàng
-          </Link>
-          <Link
-            to="/products"
-            className="w-full sm:w-auto px-6 py-3 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-full text-sm font-semibold transition-all"
-          >
-            Tiếp tục mua sắm
-          </Link>
-        </div>
+  if (receipt) {
+    return <section className="max-w-2xl mx-auto px-4 py-12 space-y-6">
+      <CheckCircle2 className="w-14 h-14 text-emerald-600" />
+      <h1 className="text-2xl font-bold">Đặt hàng thành công</h1>
+      <p>Mã đơn hàng: <strong className="break-all">{receipt.orderCode}</strong></p>
+      <p className="text-sm text-slate-600">Đơn đã được ghi nhận. Bạn thanh toán khi nhận hàng (COD).</p>
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 space-y-4">
+        {receipt.items.map((item) => <div key={item.productId} className="flex justify-between gap-4 text-sm"><span>{item.productName} × {item.quantity}</span><strong>{formatVND(item.subtotal)}</strong></div>)}
+        <div className="flex justify-between border-t pt-4"><span>Tiền hàng</span><span>{formatVND(receipt.subtotal)}</span></div>
+        <div className="flex justify-between"><span>Phí giao hàng</span><span>{formatVND(receipt.shippingFee)}</span></div>
+        <div className="flex justify-between font-bold text-lg"><span>Tổng tiền COD</span><span>{formatVND(receipt.total)}</span></div>
       </div>
-    );
+      {cartError && <p role="alert" className="text-sm text-amber-800">Đơn đã tạo thành công nhưng chưa tải lại được giỏ hàng. Bạn có thể mở giỏ và tải lại; không cần đặt lại đơn.</p>}
+      <div className="flex flex-wrap gap-4"><Link className="text-indigo-600 underline" to={`/orders?orderCode=${encodeURIComponent(receipt.orderCode)}`}>Xem đơn hàng</Link><Link className="text-indigo-600 underline" to="/products">Tiếp tục mua sắm</Link><Link className="text-indigo-600 underline" to="/">Về trang chủ</Link></div>
+    </section>;
+  }
+
+  if (pendingCheckout) {
+    return <section className="max-w-xl mx-auto px-4 py-12 space-y-5">
+      <h1 className="text-2xl font-bold">Kiểm tra kết quả đặt hàng</h1>
+      <p>Yêu cầu trước đang chờ xác nhận kết quả. Dùng nút bên dưới để nhận kết quả của cùng lần đặt hàng.</p>
+      <p className="text-sm text-slate-600">Người nhận: {pendingCheckout.shippingInfo.fullName} · {pendingCheckout.shippingInfo.phone}</p>
+      <p className="font-semibold">Tổng tiền đã xác nhận: {formatVND(pendingCheckout.expectedTotal)}</p>
+      {orderError && <p role="alert" className="text-rose-700">{orderError}</p>}
+      <button disabled={placingOrder} onClick={() => submitCheckout(pendingCheckout)} className="rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white disabled:opacity-50">{placingOrder ? 'Đang xác nhận...' : 'Kiểm tra và nhận kết quả'}</button>
+      <p className="text-xs text-slate-500">Thông tin của lần đặt này được giữ trong tab trình duyệt. Giỏ tạm khóa chỉnh sửa cho đến khi có kết quả.</p>
+    </section>;
   }
 
   if (cartLoading) return <p role="status" className="p-12 text-center">Đang tải giỏ hàng...</p>;
@@ -245,6 +185,7 @@ export default function CheckoutPage() {
       {orderError && <p role="alert" className="mb-4 text-rose-700">{orderError}</p>}
       {!canCheckout && <p className="mb-4 text-amber-700">Giỏ hàng có sản phẩm không khả dụng hoặc đang cập nhật. Vui lòng kiểm tra lại.</p>}
       <form onSubmit={handlePlaceOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        <fieldset disabled={placingOrder} className="contents">
         {/* CỘT TRÁI: Form Địa chỉ & Phương thức thanh toán (7 cột) */}
         <div className="lg:col-span-7 space-y-8">
           {/* Thông tin người nhận */}
@@ -262,6 +203,7 @@ export default function CheckoutPage() {
                 <input
                   type="text"
                   name="fullName"
+                  maxLength={100}
                   required
                   value={formData.fullName}
                   onChange={handleChange}
@@ -276,26 +218,14 @@ export default function CheckoutPage() {
                 <input
                   type="tel"
                   name="phone"
+                  pattern="[+]?[0-9]{8,15}"
+                  maxLength={16}
                   required
                   value={formData.phone}
                   onChange={handleChange}
                   className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all"
                 />
               </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Địa chỉ email nhận hóa đơn *
-              </label>
-              <input
-                type="email"
-                name="email"
-                required
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all"
-              />
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -306,6 +236,7 @@ export default function CheckoutPage() {
                 <input
                   type="text"
                   name="province"
+                  maxLength={100}
                   required
                   value={formData.province}
                   onChange={handleChange}
@@ -320,6 +251,7 @@ export default function CheckoutPage() {
                 <input
                   type="text"
                   name="district"
+                  maxLength={100}
                   required
                   value={formData.district}
                   onChange={handleChange}
@@ -335,6 +267,7 @@ export default function CheckoutPage() {
               <input
                 type="text"
                 name="address"
+                maxLength={500}
                 required
                 value={formData.address}
                 onChange={handleChange}
@@ -349,6 +282,7 @@ export default function CheckoutPage() {
               <input
                 type="text"
                 name="notes"
+                maxLength={500}
                 value={formData.notes}
                 onChange={handleChange}
                 placeholder="VD: Giao trước 17h, gọi điện trước khi tới..."
@@ -364,94 +298,9 @@ export default function CheckoutPage() {
               2. Phương thức thanh toán
             </h2>
 
-            <div className="space-y-3">
-              {/* VietQR */}
-              <label
-                className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
-                  paymentMethod === 'vietqr'
-                    ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20 shadow-xs'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="vietqr"
-                    checked={paymentMethod === 'vietqr'}
-                    onChange={() => setPaymentMethod('vietqr')}
-                    className="text-indigo-600"
-                  />
-                  <div>
-                    <p className="text-xs sm:text-sm font-bold text-slate-900 flex items-center gap-1.5">
-                      Chuyển khoản VietQR tức thì
-                      <span className="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-bold">
-                        Khuyên dùng
-                      </span>
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      Tự động quét QR qua app ngân hàng, xác nhận ngay trong 3 giây
-                    </p>
-                  </div>
-                </div>
-                <QrCode className="w-6 h-6 text-indigo-600" />
-              </label>
-
-              {/* COD */}
-              <label
-                className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
-                  paymentMethod === 'cod'
-                    ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20 shadow-xs'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="cod"
-                    checked={paymentMethod === 'cod'}
-                    onChange={() => setPaymentMethod('cod')}
-                    className="text-indigo-600"
-                  />
-                  <div>
-                    <p className="text-xs sm:text-sm font-bold text-slate-900">
-                      Thanh toán khi nhận hàng (COD)
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      Kiểm tra sản phẩm đồng kiểm rồi mới thanh toán tiền mặt cho shipper
-                    </p>
-                  </div>
-                </div>
-                <Banknote className="w-6 h-6 text-slate-600" />
-              </label>
-
-              {/* MoMo */}
-              <label
-                className={`flex items-center justify-between p-4 rounded-2xl border transition-all cursor-pointer ${
-                  paymentMethod === 'momo'
-                    ? 'border-indigo-600 bg-indigo-50/50 ring-2 ring-indigo-500/20 shadow-xs'
-                    : 'border-slate-200 hover:border-slate-300 bg-white'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <input
-                    type="radio"
-                    name="payment"
-                    value="momo"
-                    checked={paymentMethod === 'momo'}
-                    onChange={() => setPaymentMethod('momo')}
-                    className="text-indigo-600"
-                  />
-                  <div>
-                    <p className="text-xs sm:text-sm font-bold text-slate-900">
-                      Ví MoMo / ZaloPay
-                    </p>
-                    <p className="text-[11px] text-slate-500">Thanh toán qua ví điện tử liên kết</p>
-                  </div>
-                </div>
-                <span className="text-xs font-extrabold text-pink-600">MoMo</span>
-              </label>
+            <div className="flex items-center gap-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
+              <Banknote className="h-6 w-6 text-indigo-600" />
+              <div><p className="font-semibold text-sm">Thanh toán khi nhận hàng (COD)</p><p className="text-xs text-slate-500 mt-1">Thanh toán khi nhận hàng. Đơn mới được ghi nhận ở trạng thái chờ xác nhận.</p></div>
             </div>
           </div>
         </div>
@@ -492,12 +341,7 @@ export default function CheckoutPage() {
                 <span>Tạm tính</span>
                 <span className="font-semibold text-slate-900">{formatVND(subtotal)}</span>
               </div>
-              {discountAmount > 0 && (
-                <div className="flex justify-between text-emerald-600 font-semibold">
-                  <span>Giảm giá</span>
-                  <span>-{formatVND(discountAmount)}</span>
-                </div>
-              )}
+
               <div className="flex justify-between text-slate-600">
                 <span>Phí vận chuyển</span>
                 <span>{shippingFee === 0 ? 'Miễn phí' : formatVND(shippingFee)}</span>
@@ -525,6 +369,7 @@ export default function CheckoutPage() {
             </div>
           </div>
         </div>
+        </fieldset>
       </form>
     </div>
   );

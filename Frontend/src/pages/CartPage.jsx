@@ -14,7 +14,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function CartPage() {
   const {
-    cart, cartLoading, cartBusy, cartError, canCheckout, reloadCart,
+    cart, cartLoading, cartBusy, cartError, canCheckout, reloadCart, pendingCheckout,
     subtotal,
     discountAmount,
     shippingFee,
@@ -33,6 +33,9 @@ export default function CartPage() {
 
   if (!isAuthenticated) {
     return <div className="p-12 text-center space-y-4"><h1 className="text-xl font-bold">Đăng nhập để xem giỏ hàng</h1><Link className="text-indigo-600 underline" to="/login" state={{ from: { pathname: '/cart' } }}>Đăng nhập</Link></div>;
+  }
+  if (pendingCheckout) {
+    return <div className="p-12 text-center space-y-4"><h1 className="text-xl font-bold">Đơn hàng đang chờ xác nhận kết quả</h1><p>Vui lòng kiểm tra kết quả của lần đặt hàng trước khi sửa giỏ.</p><Link className="text-indigo-600 underline" to="/checkout">Kiểm tra kết quả đặt hàng</Link></div>;
   }
   if (cartLoading) return <p role="status" className="p-12 text-center">Đang tải giỏ hàng...</p>;
   if (cartError && !cart.length) {
