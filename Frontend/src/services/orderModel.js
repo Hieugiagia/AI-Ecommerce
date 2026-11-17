@@ -65,3 +65,44 @@ export function cancellationReason(reason) {
   if (!value || value.length > 500) throw new Error('Lý do hủy phải từ 1 đến 500 ký tự.');
   return value;
 }
+
+const ADMIN_NEXT_STATUS = { PENDING: 'CONFIRMED', CONFIRMED: 'PROCESSING', PROCESSING: 'SHIPPED', SHIPPED: 'DELIVERED' };
+
+export function normalizeAdminOrder(data) {
+  if (!data || !Number.isInteger(data.customerId) || !Array.isArray(data.allowedNextStatuses)) {
+    throw new Error('Dữ liệu quản trị đơn hàng không hợp lệ.');
+  }
+  const order = normalizeOrder(data.order);
+  const next = ADMIN_NEXT_STATUS[order.status];
+  const allowedNextStatuses = order.paymentMethod === 'COD' && order.paymentStatus === 'PENDING'
+    && next && data.allowedNextStatuses.includes(next) ? [next] : [];
+  return { ...data, order, allowedNextStatuses };
+}
+
+export function normalizeAdminOrderList(data) {
+  if (!data || !Array.isArray(data.orders) || !Number.isInteger(data.total) || data.total < 0
+      || !Number.isInteger(data.page) || data.page < 1 || !Number.isInteger(data.limit) || data.limit < 1
+      || !Number.isInteger(data.totalPages) || data.totalPages < 0) {
+    throw new Error('Danh sách đơn quản trị không hợp lệ.');
+  }
+  return { ...data, orders: data.orders.map(normalizeAdminOrder) };
+}
+
+export function adminOrderListQuery(params = {}) {
+  const query = new URLSearchParams(orderListQuery(params));
+  if (params.q?.trim()) query.set('q', params.q.trim());
+  return query.toString();
+}
+
+export function adminStatusPayload({ expectedStatus, status, codCollected = false } = {}) {
+  if (!ADMIN_NEXT_STATUS[expectedStatus] || ADMIN_NEXT_STATUS[expectedStatus] !== status) {
+    throw new Error('Chỉ được chuyển đơn sang bước tiếp theo.');
+  }
+  if (status === 'DELIVERED' && codCollected !== true) {
+    throw new Error('Bạn phải xác nhận đã giao hàng và thu đủ tiền COD.');
+  }
+  if (status !== 'DELIVERED' && codCollected !== false) {
+    throw new Error('Chỉ xác nhận thu tiền khi hoàn tất giao hàng.');
+  }
+  return { expectedStatus, status, codCollected };
+}
