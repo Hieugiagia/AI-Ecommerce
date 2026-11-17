@@ -30,7 +30,16 @@ public enum ErrorCode {
     CHECKOUT_TOTAL_CHANGED(4003, "Tổng tiền đã thay đổi. Vui lòng tải lại giỏ hàng và xác nhận lại", HttpStatus.CONFLICT),
     CHECKOUT_AMOUNT_INVALID(4004, "Tổng tiền đơn hàng vượt giới hạn cho phép", HttpStatus.BAD_REQUEST),
     RESET_TOKEN_INVALID(5001, "Liên kết khôi phục không hợp lệ, đã hết hạn hoặc đã được sử dụng", HttpStatus.BAD_REQUEST),
-    RESET_PASSWORD_INVALID(5002, "Mật khẩu phải từ 8 ký tự và không vượt quá 72 byte", HttpStatus.BAD_REQUEST)
+    RESET_PASSWORD_INVALID(5002, "Mật khẩu phải từ 8 ký tự và không vượt quá 72 byte", HttpStatus.BAD_REQUEST),
+    ORDER_NOT_FOUND(6001, "Không tìm thấy đơn hàng", HttpStatus.NOT_FOUND),
+    ORDER_CANNOT_CANCEL(6002, "Chỉ được hủy đơn đang chờ xác nhận", HttpStatus.CONFLICT),
+    ORDER_PAYMENT_CANNOT_CANCEL(6003, "Đơn không có thanh toán COD đang chờ thu tiền để tự hủy", HttpStatus.CONFLICT),
+    ORDER_FILTER_INVALID(6004, "Bộ lọc không hợp lệ: page từ 1, limit từ 1 đến 50 và trạng thái hợp lệ", HttpStatus.BAD_REQUEST),
+    ORDER_RESTOCK_INVALID(6005, "Không thể hoàn tồn kho. Vui lòng liên hệ quản trị viên", HttpStatus.CONFLICT),
+    ADMIN_ORDER_TRANSITION_INVALID(7001, "Không được chuyển đơn sang trạng thái này", HttpStatus.CONFLICT),
+    ADMIN_ORDER_STATUS_CHANGED(7002, "Trạng thái đơn đã thay đổi. Vui lòng tải lại trước khi cập nhật", HttpStatus.CONFLICT),
+    ADMIN_ORDER_PAYMENT_INVALID(7003, "Thanh toán không phù hợp để xử lý đơn COD", HttpStatus.CONFLICT),
+    COD_COLLECTION_REQUIRED(7004, "Bạn phải xác nhận đã giao hàng và thu đủ tiền COD", HttpStatus.BAD_REQUEST)
     ;
 
     ErrorCode(int code, String message, HttpStatusCode httpStatusCode) {

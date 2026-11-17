@@ -1,8 +1,10 @@
 import { apiRequest } from './api';
+import { checkoutPayload, normalizeCheckout } from './checkoutModel';
+import { normalizeOrder, normalizeOrderList, orderListQuery, cancellationReason } from './orderModel';
 
 /**
  * Order Service
- * Khớp chuẩn 100% với Router /orders của Backend:
+ * API đơn hàng khách hàng và quản trị:
  * - POST  /orders/checkout            : Đặt hàng từ giỏ
  * - GET   /orders/my-orders           : Xem danh sách đơn đã mua của khách hàng
  * - GET   /orders/{orderCode}         : Xem chi tiết 1 đơn hàng
@@ -18,20 +20,22 @@ export const orderService = {
    * @param {Object} checkoutData
    */
   async checkout(checkoutData) {
-    return await apiRequest('/orders/checkout', {
+    const payload = checkoutPayload(checkoutData.checkoutKey, checkoutData.expectedTotal, checkoutData.shippingInfo);
+    const data = await apiRequest('/orders/checkout', {
       method: 'POST',
-      body: checkoutData,
+      body: payload,
     });
+    return normalizeCheckout(data);
   },
 
   /**
    * Lấy danh sách đơn hàng của tôi
    * GET /orders/my-orders
    */
-  async getMyOrders() {
-    return await apiRequest('/orders/my-orders', {
-      method: 'GET',
-    });
+  async getMyOrders(params = {}) {
+    const query = orderListQuery(params);
+    const data = await apiRequest('/orders/my-orders?' + query, { method: 'GET' });
+    return normalizeOrderList(data);
   },
 
   /**
@@ -40,9 +44,8 @@ export const orderService = {
    * @param {string} orderCode
    */
   async getOrderByCode(orderCode) {
-    return await apiRequest(`/orders/${orderCode}`, {
-      method: 'GET',
-    });
+    const data = await apiRequest(`/orders/${encodeURIComponent(orderCode)}`, { method: 'GET' });
+    return normalizeOrder(data);
   },
 
   /**
@@ -52,10 +55,13 @@ export const orderService = {
    * @param {string} reason
    */
   async cancelOrder(orderCode, reason = '') {
-    return await apiRequest(`/orders/${orderCode}/cancel`, {
+    const data = await apiRequest(`/orders/${encodeURIComponent(orderCode)}/cancel`, {
       method: 'POST',
-      body: { reason },
+      body: { reason: cancellationReason(reason) },
     });
+    const order = normalizeOrder(data);
+    if (order.status !== 'CANCELLED') throw new Error('Máy chủ chưa xác nhận hủy đơn. Vui lòng tải lại để kiểm tra.');
+    return order;
   },
 
   /**

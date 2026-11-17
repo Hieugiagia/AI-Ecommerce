@@ -5,6 +5,7 @@ import com.ecommerce.backend.modules.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -62,6 +63,12 @@ public class Order extends BaseEntity {
     // Snapshot phí giao hàng tại thời điểm đặt.
     @Column(name = "shipping_fee", precision = 15, scale = 2)
     private BigDecimal shippingFee;
+
+    @Column(name = "cancel_reason", length = 500)
+    private String cancelReason;
+
+    @Column(name = "cancelled_at")
+    private LocalDateTime cancelledAt;
 
     // Quan hệ 1 Order có nhiều OrderItem con
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
