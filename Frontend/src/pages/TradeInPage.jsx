@@ -34,7 +34,7 @@ export default function TradeInPage({ onOpenAiChat }) {
     { id: 'watch', name: 'Apple Watch', icon: Watch },
   ];
 
-  // Old models database with base price (Loại 1) and Alibaba subsidy
+  // Old models database with base price (Loại 1) and Zentro subsidy
   const oldModelsData = {
     iphone: [
       { name: 'iPhone 14 Pro Max 128GB', basePrice: 17500000, subsidy: 3000000 },
@@ -416,7 +416,7 @@ export default function TradeInPage({ onOpenAiChat }) {
                   <div className="flex items-center justify-between text-emerald-400">
                     <span className="flex items-center gap-1">
                       <Banknote className="w-3.5 h-3.5" />
-                      2. Trợ giá độc quyền Alibaba Store:
+                      2. Trợ giá độc quyền Zentro Store:
                     </span>
                     <strong className="font-bold">+{formatPrice(subsidyAmount)}</strong>
                   </div>
@@ -572,7 +572,7 @@ export default function TradeInPage({ onOpenAiChat }) {
         <div className="space-y-3">
           {[
             {
-              q: 'Máy cũ xách tay, không mua tại Alibaba Store có được thu đổi không?',
+              q: 'Máy cũ xách tay, không mua tại Zentro Store có được thu đổi không?',
               a: 'Có. Chúng tôi thu mua TẤT CẢ các dòng máy chính hãng, xách tay quốc tế (Mỹ LL/A, Nhật J/A, Hàn KH/A...) không phân biệt nơi mua ban đầu.',
             },
             {
@@ -640,7 +640,7 @@ export default function TradeInPage({ onOpenAiChat }) {
                   </div>
                   <h4 className="text-base font-bold text-slate-900">Đăng Ký Thành Công!</h4>
                   <p className="text-xs text-slate-500">
-                    Chuyên viên thẩm định Alibaba Store sẽ liên hệ qua số {bookingForm.phone} trong 15 phút để xác nhận lịch hẹn.
+                    Chuyên viên thẩm định Zentro Store sẽ liên hệ qua số {bookingForm.phone} trong 15 phút để xác nhận lịch hẹn.
                   </p>
                 </div>
               ) : (

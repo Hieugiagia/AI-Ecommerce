@@ -24,9 +24,9 @@ export default function PromotionsPage({ onOpenAiChat }) {
   // Extended vouchers list
   const promotionVouchers = [
     {
-      code: 'ALIBABA10',
+      code: 'ZENTRO10',
       title: 'Giảm 10% Tối Đa 1 Triệu',
-      desc: 'Áp dụng cho mọi đơn hàng điện thoại, laptop, đồng hồ tại Alibaba Store',
+      desc: 'Áp dụng cho mọi đơn hàng điện thoại, laptop, đồng hồ tại Zentro Store',
       expiry: 'Còn 3 ngày',
       minSpend: 'Không giới hạn',
       badge: 'HOT NHẤT',
@@ -142,7 +142,7 @@ export default function PromotionsPage({ onOpenAiChat }) {
           <div className="max-w-3xl space-y-4 text-center sm:text-left">
             <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider bg-rose-500/20 text-rose-300 border border-rose-500/30 backdrop-blur-md">
               <Flame className="w-3.5 h-3.5 text-rose-400 animate-pulse" />
-              ALIBABA PROMO FESTIVAL • SIÊU SALE CÔNG NGHỆ
+              ZENTRO PROMO FESTIVAL • SIÊU SALE CÔNG NGHỆ
             </span>
 
             <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">

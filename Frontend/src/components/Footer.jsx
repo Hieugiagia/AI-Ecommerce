@@ -77,7 +77,7 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="bg-white border-t border-slate-200/80 mt-20 relative overflow-hidden">
+    <footer className="store-footer commerce-theme bg-white border-t border-slate-200/80 mt-20 relative overflow-hidden">
       {/* Background ambient lighting */}
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-indigo-50/60 rounded-full blur-3xl pointer-events-none -z-10" />
       <div className="absolute bottom-10 right-10 w-96 h-96 bg-violet-50/50 rounded-full blur-3xl pointer-events-none -z-10" />
@@ -121,15 +121,15 @@ export default function Footer() {
 
       {/* ================= 2. BANNER ĐĂNG KÝ VOUCHER ĐỘC QUYỀN ================= */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
-        <div className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-xl shadow-slate-900/10 relative overflow-hidden flex flex-col lg:flex-row lg:items-center justify-between gap-6 border border-slate-800">
+        <div className="footer-newsletter p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white shadow-xl shadow-slate-900/10 relative overflow-hidden flex flex-col lg:flex-row lg:items-center justify-between gap-6 border border-slate-800">
           {/* Glowing particle accents */}
-          <div className="absolute top-0 right-1/3 w-64 h-64 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-violet-500/20 rounded-full blur-2xl pointer-events-none" />
+          <div className="footer-newsletter-glow absolute top-0 right-1/3 w-64 h-64 bg-indigo-500/20 rounded-full blur-2xl pointer-events-none" />
+          <div className="footer-newsletter-glow absolute -bottom-10 -left-10 w-48 h-48 bg-violet-500/20 rounded-full blur-2xl pointer-events-none" />
 
           <div className="space-y-2 relative z-10 max-w-xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-bold">
+            <div className="footer-newsletter-tag inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-400/30 text-indigo-300 text-xs font-bold">
               <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
-              <span>Ưu Đãi Độc Quyền Thành Viên Alibaba Store</span>
+              <span>Ưu Đãi Độc Quyền Thành Viên Zentro Store</span>
             </div>
             <h3 className="text-xl sm:text-2xl font-black tracking-tight text-white">
               Nhận ngay Voucher <span className="bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-400 bg-clip-text text-transparent">50.000 ₫</span> cho đơn đầu tiên
@@ -147,6 +147,7 @@ export default function Footer() {
                   <input
                     type="email"
                     required
+                    aria-label="Email nhận ưu đãi"
                     placeholder="Nhập địa chỉ email của bạn..."
                     value={emailInput}
                     onChange={(e) => setEmailInput(e.target.value)}
@@ -194,10 +195,10 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10">
           {/* Cột 1: Thông tin thương hiệu & Hotline */}
           <div className="lg:col-span-4 space-y-4">
-            <BrandLogo size="md" showSlogan={true} />
+            <BrandLogo variant="modern" size="md" showSlogan={true} />
 
             <p className="text-xs text-slate-600 leading-relaxed">
-              Alibaba-Store là nền tảng thương mại thiết bị công nghệ chính hãng hàng đầu.
+              Zentro Store là nền tảng thương mại thiết bị công nghệ chính hãng hàng đầu.
               Cam kết 100% sản phẩm nguồn gốc rõ ràng, bảo hành ủy quyền chuẩn quốc tế cùng trải nghiệm mua sắm tích hợp AI thông minh.
             </p>
 
@@ -354,12 +355,12 @@ export default function Footer() {
         <div className="border-t border-slate-200/80 mt-12 pt-6 flex flex-col md:flex-row items-center justify-between text-xs text-slate-500 gap-4">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-semibold text-slate-700">Alibaba AI Engine:</span>
+            <span className="font-semibold text-slate-700">Zentro AI Engine:</span>
             <span>Hệ thống hoạt động ổn định 99.99% • Bảo mật đa lớp</span>
           </div>
 
           <p className="text-center">
-            &copy; 2026 Alibaba Store. All rights reserved.
+            &copy; 2026 Zentro Store. All rights reserved.
           </p>
 
           <div className="flex items-center gap-4 text-[11px]">

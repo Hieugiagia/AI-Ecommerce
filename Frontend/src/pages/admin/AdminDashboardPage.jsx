@@ -153,7 +153,7 @@ function AdminDashboardTools() {
   const [chatMessages, setChatMessages] = useState([
     {
       sender: 'ai',
-      text: 'Xin chào Admin! Tôi là trợ lý phân tích dữ liệu Alibaba-Store. Dựa trên thống kê 1.245 đơn hàng tuần qua, tỷ suất lợi nhuận điện thoại đang duy trì 28.5%, trong khi phụ kiện đạt 42%. Bạn cần kiểm tra chỉ số nào?',
+      text: 'Xin chào Admin! Tôi là trợ lý phân tích dữ liệu Zentro Store. Dựa trên thống kê 1.245 đơn hàng tuần qua, tỷ suất lợi nhuận điện thoại đang duy trì 28.5%, trong khi phụ kiện đạt 42%. Bạn cần kiểm tra chỉ số nào?',
     },
   ]);
   const [chatInput, setChatInput] = useState('');

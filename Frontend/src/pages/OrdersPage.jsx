@@ -1,3 +1,4 @@
+import { formatDisplayDateTime } from '../services/dateDisplay';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Package, Eye, Ban, X, Check } from 'lucide-react';
@@ -7,10 +8,7 @@ import { ORDER_STATUSES, PAYMENT_METHODS, PAYMENT_STATUSES } from '../services/o
 
 const button = 'rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold disabled:opacity-50';
 const money = (value) => value == null ? 'Chưa có thông tin' : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
-const date = (value) => {
-  if (!value || Number.isNaN(new Date(value).getTime())) return 'Chưa có thông tin';
-  return new Date(value).toLocaleString('vi-VN');
-};
+const date = formatDisplayDateTime;
 const progressSteps = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED'];
 
 function OrderProgress({ status }) {

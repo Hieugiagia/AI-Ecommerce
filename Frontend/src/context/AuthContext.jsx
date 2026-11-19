@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { authService } from '../services/authService';
+import { profilePayload, confirmedProfile } from '../services/profileModel';
 
 const AuthContext = createContext();
 
@@ -14,6 +15,9 @@ export function AuthProvider({ children }) {
     }
   });
   const [loading, setLoading] = useState(false);
+  const sessionRef = useRef(null);
+  sessionRef.current = { token, id: user?.id };
+  const profileRevision = useRef(0);
 
   // Drop the current account when the API client rejects its session.
   useEffect(() => {
@@ -46,10 +50,11 @@ export function AuthProvider({ children }) {
       if (!token) return;
       try {
         setLoading(true);
+        const revision = profileRevision.current;
         const response = await authService.getProfile();
         // Backend trả về { user: {...} } hoặc trực tiếp object user
         const profileUser = response?.user || response;
-        if (profileUser?.id || profileUser?.email) {
+        if (revision === profileRevision.current && sessionRef.current.token === token && (profileUser?.id || profileUser?.email)) {
           setUser(profileUser);
         }
       } catch (err) {
@@ -188,13 +193,19 @@ export function AuthProvider({ children }) {
    * Cập nhật thông tin profile của user
    */
   const updateProfile = async (newProfileData) => {
+    const expected = user;
+    const started = sessionRef.current;
     try {
-      const response = await authService.updateProfile(newProfileData);
-      const updated = response?.user || { ...user, ...newProfileData };
+      if (!expected?.id || !started.token) throw new Error('Vui lòng đăng nhập lại.');
+      const payload = profilePayload(newProfileData);
+      profileRevision.current++;
+      const response = await authService.updateProfile(payload);
+      if (sessionRef.current.token !== started.token || sessionRef.current.id !== started.id) throw new Error('Phiên đăng nhập đã thay đổi.');
+      const updated = confirmedProfile(response, expected);
       setUser(updated);
       return { success: true, user: updated };
     } catch (err) {
-      return { success: false, error: err.message };
+      return { success: false, error: [404, 405].includes(err.status) ? 'Chức năng cập nhật tài khoản hiện chưa sẵn sàng.' : err.message };
     }
   };
 

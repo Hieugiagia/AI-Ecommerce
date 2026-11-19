@@ -10,7 +10,7 @@ export default function AiChatWidget({ isOpen, onClose }) {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      text: 'Xin chào! Mình là trợ lý AI tư vấn của Alibaba-Store. Bạn đang tìm thiết bị nào hoặc cần tư vấn cấu hình ra sao?',
+      text: 'Xin chào! Mình là trợ lý AI tư vấn của Zentro Store. Bạn đang tìm thiết bị nào hoặc cần tư vấn cấu hình ra sao?',
       recommendedProducts: [],
     },
   ]);
@@ -123,8 +123,8 @@ export default function AiChatWidget({ isOpen, onClose }) {
             whileTap={{ scale: 0.94 }}
             onClick={onClose}
             className="fixed bottom-6 right-6 z-50 p-4 bg-gradient-to-tr from-indigo-600 via-violet-600 to-purple-600 text-white rounded-full shadow-xl shadow-indigo-500/30 cursor-pointer flex items-center justify-center group"
-            title="Trợ lý tư vấn AI Alibaba-Store"
-            aria-label="Mở Trợ lý Alibaba-Store"
+            title="Trợ lý tư vấn AI Zentro Store"
+            aria-label="Mở Trợ lý Zentro Store"
           >
             <Sparkles className="w-6 h-6 text-white group-hover:rotate-12 transition-transform duration-300" />
             <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">

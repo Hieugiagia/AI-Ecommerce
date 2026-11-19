@@ -18,7 +18,7 @@ export function normalizeProduct(p) {
   const price = typeof p.price === 'string' ? parseFloat(p.price) : Number(p.price) || 0;
   const originalPrice = p.originalPrice
     ? (typeof p.originalPrice === 'string' ? parseFloat(p.originalPrice) : Number(p.originalPrice))
-    : (price > 0 ? Math.round(price * 1.1) : 0);
+    : price;
 
   return {
     ...p,

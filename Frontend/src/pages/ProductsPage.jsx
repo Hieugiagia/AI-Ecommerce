@@ -1,28 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Search,
-  X,
-  Sparkles,
-  ChevronRight,
-  Smartphone,
-  Laptop,
-  Headphones,
-  Watch,
-  LayoutGrid,
-  ShieldCheck,
-  RotateCcw,
-  Zap,
-  SlidersHorizontal,
-  ArrowUpDown,
-  Flame,
-  Check,
-  Monitor,
-  Home,
-} from 'lucide-react';
+import { Search, X, ChevronRight, Smartphone, Laptop, Headphones, Watch, LayoutGrid, ShieldCheck, RotateCcw, Zap, SlidersHorizontal, ArrowUpDown, Flame, Check, Monitor, Home } from 'lucide-react';
 import { priceBounds } from '../services/productFilters';
 import ProductCard from '../components/ProductCard';
+import CategoryBanner from '../components/CategoryBanner';
+import { categoryIcon } from '../data/categoryUi';
 import { productService } from '../services/productService';
 import { apiRequest } from '../services/api';
 
@@ -96,72 +79,7 @@ export default function ProductsPage() {
     return () => { active = false; clearTimeout(timer); };
   }, [selectedCategory, searchQuery, priceRange, sortBy, page, requestKey]);
 
-  // Category metadata for banners
-  const categoryBanners = {
-    'all': {
-      title: 'Tất Cả Thiết Bị Công Nghệ Chính Hãng',
-      subtitle: 'Khám phá sản phẩm công nghệ đỉnh cao từ Apple, Samsung, Sony, Dell, Asus với chính sách bảo hành 12 tháng 1 đổi 1.',
-      badge: 'BẢO HÀNH ỦY QUYỀN CHÍNH HÃNG',
-      color: 'from-slate-900 via-indigo-950 to-slate-900',
-    },
-    'dien-thoai': {
-      title: 'Điện Thoại Smartphone Flagship',
-      subtitle: 'Trợ giá thu cũ lên đời đến 4.000.000đ • Trả góp 0% duyệt nhanh 5 phút qua thẻ hoặc CCCD.',
-      badge: 'TOP BÁN CHẠY NHẤT',
-      color: 'from-slate-950 via-slate-900 to-indigo-950',
-    },
-    'laptop': {
-      title: 'Laptop & Máy Tính Cao Cấp',
-      subtitle: 'Hiệu năng đỉnh cao với MacBook M3, ROG Strix, Dell XPS • Đáp ứng đồ họa, lập trình và văn phòng.',
-      badge: 'HIỆU NĂNG VƯỢT TRỘI',
-      color: 'from-slate-950 via-indigo-950 to-purple-950',
-    },
-    'am-thanh': {
-      title: 'Tai Nghe Chính Hãng',
-      subtitle: 'Trải nghiệm tai nghe chống ồn chủ động đỉnh cao từ Sony, Apple, Marshall • Giảm thêm 200k qua VietQR.',
-      badge: 'TAI NGHE CHÍNH HÃNG',
-      color: 'from-slate-950 via-slate-900 to-indigo-900',
-    },
-    'dong-ho': {
-      title: 'Đồng Hồ & Thiết Bị Ghi Hình',
-      subtitle: 'Theo dõi chỉ số sức khỏe 24/7, đo điện tâm đồ ECG, GPS đa băng tần và camera hành trình 4K chống rung đỉnh cao.',
-      badge: 'SỨC KHỎE & THỜI TRANG',
-      color: 'from-slate-950 via-teal-950 to-slate-900',
-    },
-    'phu-kien': {
-      title: 'PC, Màn Hình & Phụ Kiện Đỉnh Cao',
-      subtitle: 'Nâng tầm góc setup với màn hình OLED 240Hz, UltraSharp 2K, phím cơ nhôm Keychron và sạc Anker GaN.',
-      badge: 'SETUP CHUYÊN NGHIỆP',
-      color: 'from-slate-950 via-slate-900 to-indigo-950',
-    },
-    'gia-dung': {
-      title: 'Đồ Gia Dụng & Smart Home Tiện Nghi',
-      subtitle: 'Cuộc sống hiện đại với robot hút bụi lau nhà tự giặt sấy Dreame, máy lọc không khí thông minh.',
-      badge: 'TIỆN NGHI GIA ĐÌNH',
-      color: 'from-slate-950 via-purple-950 to-slate-900',
-    },
-  };
-
-  const currentBanner = categoryBanners[selectedCategory] || categoryBanners['all'];
-
-  const getCategoryIcon = (slug) => {
-    switch (slug) {
-      case 'dien-thoai':
-        return Smartphone;
-      case 'laptop':
-        return Laptop;
-      case 'am-thanh':
-        return Headphones;
-      case 'dong-ho':
-        return Watch;
-      case 'phu-kien':
-        return Monitor;
-      case 'gia-dung':
-        return Home;
-      default:
-        return LayoutGrid;
-    }
-  };
+  const getCategoryIcon = categoryIcon;
 
   const hotTags = [
     { label: 'iPhone 15 Pro Max', badge: 'Hot', query: 'iPhone 15' },
@@ -330,7 +248,7 @@ export default function ProductsPage() {
       <div className="p-4 bg-gradient-to-br from-indigo-50/70 to-violet-50/70 border border-indigo-100 rounded-3xl space-y-2">
         <div className="flex items-center gap-2 text-indigo-900 font-extrabold text-xs">
           <ShieldCheck className="w-4 h-4 text-indigo-600" />
-          <span>Cam kết tại Alibaba Store</span>
+          <span>Cam kết tại Zentro Store</span>
         </div>
         <ul className="text-[11px] text-slate-600 space-y-1.5">
           <li className="flex items-center gap-1.5">
@@ -366,44 +284,7 @@ export default function ProductsPage() {
 
       </nav>
 
-      {/* 2. HERO CATEGORY BANNER (Modern MotionSites Style) */}
-      <motion.div
-        key={selectedCategory}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-        className={`relative overflow-hidden rounded-3xl bg-gradient-to-r ${currentBanner.color} text-white p-6 sm:p-8 lg:p-10 shadow-lg`}
-      >
-        <div className="absolute top-0 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 max-w-2xl space-y-3">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/10 text-indigo-200 border border-white/10 backdrop-blur-md">
-            <Sparkles className="w-3 h-3 text-indigo-300" />
-            {currentBanner.badge}
-          </span>
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight leading-tight">
-            {currentBanner.title}
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-            {currentBanner.subtitle}
-          </p>
-
-          <div className="pt-2 flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-slate-300 font-medium">
-            <span className="flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-indigo-400" />
-              Bảo Hành 12 Tháng
-            </span>
-            <span className="flex items-center gap-1.5">
-              <RotateCcw className="w-4 h-4 text-emerald-400" />
-              1 Đổi 1 Trong 30 Ngày
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Zap className="w-4 h-4 text-amber-400" />
-              Giao Siêu Tốc 2 Giờ
-            </span>
-          </div>
-        </div>
-      </motion.div>
+      <CategoryBanner selectedCategory={selectedCategory} categories={categories} priceRange={priceRange} onChoosePrice={setPriceRange} />
 
       {searchParams.has('brand') && <p className="text-sm text-slate-600">Bộ lọc thương hiệu hiện chưa khả dụng. Bạn có thể tìm theo tên sản phẩm.</p>}
       {categoryError && <p role="alert" className="text-sm text-amber-800">Không tải được danh mục: {categoryError} <button className="underline" onClick={() => setRetry((value) => value + 1)}>Thử lại</button></p>}

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   User,
@@ -9,22 +9,39 @@ import {
   ArrowRight,
   ShieldCheck,
   Check,
+  MapPin,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import OrdersPage from './OrdersPage';
+import AddressBook from '../components/AddressBook';
 
 export default function ProfilePage() {
-  const { user, isAuthenticated, isAdmin, logout } = useAuth();
+  const { user, isAuthenticated, isAdmin, logout, updateProfile, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const [activeTab, setActiveTab] = useState('orders'); // 'orders', 'info'
+  const [activeTab, setActiveTab] = useState(() => new URLSearchParams(location.search).get('tab') === 'addresses' ? 'addresses' : 'orders'); // 'orders', 'info'
   const [profileData, setProfileData] = useState({
     fullName: user?.fullName || '',
     phone: user?.phone || '',
     email: user?.email || '',
-    address: user?.address || '',
   });
   const [isSaved, setIsSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const inFlight = useRef(false);
+  const mounted = useRef(false);
+  const account = useRef(user?.id);
+  account.current = user?.id;
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  useEffect(() => {
+    setProfileData({ fullName: user?.fullName || '', phone: user?.phone || '', email: user?.email || '' });
+  }, [user?.id, user?.fullName, user?.phone, user?.email]);
+  useEffect(() => { if (new URLSearchParams(location.search).get('tab') === 'addresses') setActiveTab('addresses'); }, [location.search]);
+  function editProfile(field, value) {
+    setIsSaved(false); setSaveError('');
+    setProfileData(previous => ({ ...previous, [field]: value }));
+  }
 
   if (!isAuthenticated) {
     return (
@@ -52,10 +69,20 @@ export default function ProfilePage() {
     );
   }
 
-  const handleSaveInfo = (e) => {
+  const handleSaveInfo = async (e) => {
     e.preventDefault();
-    setIsSaved(true);
-    setTimeout(() => setIsSaved(false), 2000);
+    if (inFlight.current || loading) return;
+    const accountId = user.id;
+    inFlight.current = true; setSaving(true); setSaveError(''); setIsSaved(false);
+    try {
+      const result = await updateProfile(profileData);
+      if (!mounted.current || account.current !== accountId) return;
+      if (result.success) setIsSaved(true);
+      else setSaveError(result.error || 'Chưa lưu được thông tin.');
+    } finally {
+      inFlight.current = false;
+      if (mounted.current && account.current === accountId) setSaving(false);
+    }
   };
 
 
@@ -91,7 +118,7 @@ export default function ProfilePage() {
             <p className="text-xs text-slate-400">
               {isAdmin
                 ? 'Toàn quyền quản trị hệ thống và cấu hình sản phẩm'
-                : 'Đã tích lũy 1.250 điểm thành viên Alibaba Club'}
+                : 'Quản lý thông tin và đơn hàng của bạn'}
             </p>
           </div>
         </div>
@@ -122,7 +149,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Tabs navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-200/80 pb-3">
+      <div className="flex flex-wrap items-center gap-2 border-b border-slate-200/80 pb-3">
         <button
           onClick={() => setActiveTab('orders')}
           className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs sm:text-sm font-bold transition-all cursor-pointer ${
@@ -146,9 +173,11 @@ export default function ProfilePage() {
           <User className="w-4 h-4" />
           <span>Thông tin tài khoản</span>
         </button>
+        <button type="button" onClick={() => setActiveTab('addresses')} className={'flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border ' + (activeTab === 'addresses' ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 border-slate-200')}><MapPin size={17}/>Sổ địa chỉ</button>
       </div>
 
       {/* Tab Content */}
+      {activeTab === 'addresses' && <AddressBook key={user.id} user={user}/>}
       {activeTab === 'orders' && <OrdersPage embedded />}
 
       {activeTab === 'info' && (
@@ -157,13 +186,14 @@ export default function ProfilePage() {
             Cập nhật thông tin cá nhân
           </h2>
 
-          <form onSubmit={handleSaveInfo} className="space-y-4">
+          <form onSubmit={handleSaveInfo} aria-label="Cập nhật thông tin cá nhân" className="profile-info-form space-y-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">Họ và tên</label>
               <input
                 type="text"
                 value={profileData.fullName}
-                onChange={(e) => setProfileData({ ...profileData, fullName: e.target.value })}
+                required maxLength={255} disabled={saving || loading} autoComplete="name"
+                onChange={(e) => editProfile('fullName', e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white"
               />
             </div>
@@ -183,24 +213,18 @@ export default function ProfilePage() {
               <input
                 type="tel"
                 value={profileData.phone}
-                onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
+                required maxLength={12} disabled={saving || loading} autoComplete="tel"
+                onChange={(e) => editProfile('phone', e.target.value)}
                 className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white"
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Địa chỉ giao hàng mặc định</label>
-              <input
-                type="text"
-                value={profileData.address}
-                onChange={(e) => setProfileData({ ...profileData, address: e.target.value })}
-                className="w-full bg-slate-50 border border-slate-200 text-slate-900 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white"
-              />
-            </div>
+            <p className="text-sm text-slate-500">Địa chỉ giao hàng được nhập khi thanh toán.</p>
+            {saveError && <p role="alert" className="text-sm text-rose-700">{saveError}</p>}
 
             <div className="pt-2 flex items-center justify-between">
               {isSaved ? (
-                <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                <span role="status" className="text-xs font-bold text-emerald-600 flex items-center gap-1">
                   <Check className="w-4 h-4" /> Đã lưu thông tin thành công!
                 </span>
               ) : <div />}
@@ -208,9 +232,10 @@ export default function ProfilePage() {
               <motion.button
                 whileTap={{ scale: 0.98 }}
                 type="submit"
+                disabled={saving || loading}
                 className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-full text-xs font-bold shadow-md shadow-indigo-500/25 transition-all cursor-pointer"
               >
-                Lưu thay đổi
+                {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
               </motion.button>
             </div>
           </form>

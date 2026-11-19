@@ -25,7 +25,7 @@ export const notificationService = {
         {
           id: 'notif_1',
           title: 'Chào mừng thành viên mới!',
-          message: 'Chào mừng bạn đến với Alibaba Store. Tặng bạn mã WELCOME50K giảm 50k cho đơn đầu tiên.',
+          message: 'Chào mừng bạn đến với Zentro Store. Tặng bạn mã WELCOME50K giảm 50k cho đơn đầu tiên.',
           isRead: false,
           createdAt: new Date(Date.now() - 3600000).toISOString(),
           type: 'promotion',

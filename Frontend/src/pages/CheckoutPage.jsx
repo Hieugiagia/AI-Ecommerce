@@ -12,6 +12,9 @@ import {
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { orderService } from '../services/orderService';
+import SavedAddressPicker from '../components/SavedAddressPicker';
+import LocationFields from '../components/LocationFields';
+import { shippingFromAddress } from '../services/addressModel';
 import { checkoutPayload, checkoutRejected } from '../services/checkoutModel';
 
 export default function CheckoutPage() {
@@ -29,6 +32,7 @@ export default function CheckoutPage() {
     address: user?.address || '',
     notes: '',
   }));
+  const [legacyLocation, setLegacyLocation] = useState(null);
   const [receipt, setReceipt] = useState(null);
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderError, setOrderError] = useState('');
@@ -194,6 +198,7 @@ export default function CheckoutPage() {
               <Truck className="w-5 h-5 text-indigo-600" />
               1. Địa chỉ giao hàng
             </h2>
+            <SavedAddressPicker key={user.id} onSelect={row => { setFormData(previous => shippingFromAddress(row, previous)); setLegacyLocation(row.district !== row.ward ? row : null); }}/>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -228,37 +233,7 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Tỉnh / Thành phố *
-                </label>
-                <input
-                  type="text"
-                  name="province"
-                  maxLength={100}
-                  required
-                  value={formData.province}
-                  onChange={handleChange}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Quận / Huyện *
-                </label>
-                <input
-                  type="text"
-                  name="district"
-                  maxLength={100}
-                  required
-                  value={formData.district}
-                  onChange={handleChange}
-                  className="w-full bg-slate-50 border border-slate-200 text-slate-800 text-xs sm:text-sm px-4 py-2.5 rounded-2xl outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all"
-                />
-              </div>
-            </div>
+            {legacyLocation ? <div className="location-legacy"><p>Địa chỉ đã lưu: {legacyLocation.ward}, {legacyLocation.district}, {legacyLocation.city}</p><button type="button" onClick={()=>{setFormData(previous=>({...previous,province:'',district:'',address:legacyLocation.streetAddress}));setLegacyLocation(null);}}>Chọn tỉnh/phường mới</button></div> : <LocationFields province={formData.province} ward={formData.district} disabled={placingOrder} onChange={({province,ward})=>setFormData(previous=>({...previous,province,district:ward}))}/>}
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">

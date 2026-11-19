@@ -25,8 +25,10 @@ import {
   ArrowRight,
   TrendingUp,
 } from 'lucide-react';
-import { CATEGORIES, PRODUCTS } from '../../data/mockData';
+import { CATEGORIES } from '../../data/mockData';
 import { categoryService } from '../../services/categoryService';
+import { productService } from '../../services/productService';
+import { categoryIcon } from '../../data/categoryUi';
 
 export default function AdminCategoriesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -40,6 +42,7 @@ export default function AdminCategoriesPage() {
   );
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [categoryCounts, setCategoryCounts] = useState({});
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [deletingCatId, setDeletingCatId] = useState(null);
@@ -51,48 +54,34 @@ export default function AdminCategoriesPage() {
     description: '',
   });
 
-  const getCategoryCount = (slug) => {
-    return PRODUCTS.filter((p) => p.category === slug).length;
-  };
+  const getCategoryCount = (slug) => categoryCounts[slug] ?? '—';
 
   const getCategoryIcon = (slug) => {
-    switch (slug) {
-      case 'phone':
-        return <Smartphone className="w-5 h-5 text-indigo-600" />;
-      case 'laptop':
-        return <Laptop className="w-5 h-5 text-violet-600" />;
-      case 'audio':
-        return <Headphones className="w-5 h-5 text-pink-600" />;
-      case 'watch':
-        return <Watch className="w-5 h-5 text-amber-600" />;
-      case 'tablet':
-        return <Tablet className="w-5 h-5 text-blue-600" />;
-      case 'accessories':
-        return <Layers className="w-5 h-5 text-emerald-600" />;
-      default:
-        return <Sparkles className="w-5 h-5 text-indigo-600" />;
-    }
+    const Icon = categoryIcon(slug);
+    return <Icon className="w-5 h-5 text-indigo-600" />;
   };
 
   useEffect(() => {
+    let active = true;
     async function fetchCategories() {
       try {
         const data = await categoryService.getCategories();
-        if (data && data.length > 0) {
-          setCategories(
-            data
-              .filter((c) => c.slug !== 'all')
-              .map((cat) => ({
-                ...cat,
-                description: cat.description || `Các dòng thiết bị ${cat.name} cao cấp chính hãng tích hợp trợ lý AI thông minh.`,
-              }))
-          );
-        }
+        if (!active) return;
+        const rows = data.filter(category => category.slug !== 'all');
+        setCategories(rows.map(category => ({
+          ...category,
+          description: category.description || 'Kh\u00e1m ph\u00e1 s\u1ea3n ph\u1ea9m trong danh m\u1ee5c ' + category.name + '.',
+        })));
+        const results = await Promise.allSettled(rows.map(category =>
+          productService.getAdminProducts({ category: category.slug, page: 1, limit: 1 })));
+        if (active) setCategoryCounts(Object.fromEntries(rows.flatMap((category,index) =>
+          results[index].status === 'fulfilled' ? [[category.slug, results[index].value.total]] : [])));
       } catch (err) {
-        console.warn('Lỗi lấy danh mục từ server:', err);
+        console.warn('Kh\u00f4ng t\u1ea3i \u0111\u01b0\u1ee3c danh m\u1ee5c:', err.message);
       }
     }
     fetchCategories();
+    return () => { active = false; };
   }, []);
 
   const handleAddSubmit = async (e) => {
@@ -235,7 +224,7 @@ export default function AdminCategoriesPage() {
                   <label className="font-semibold text-slate-700 block mb-1">Tên thương hiệu</label>
                   <input
                     type="text"
-                    defaultValue="Alibaba Store - Hệ thống Bán lẻ Công nghệ Chính hãng"
+                    defaultValue="Zentro Store - Hệ thống Bán lẻ Công nghệ Chính hãng"
                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 focus:bg-white focus:border-indigo-500 outline-none transition-all"
                   />
                 </div>
@@ -297,7 +286,7 @@ export default function AdminCategoriesPage() {
                   <select className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-slate-800 focus:bg-white focus:border-indigo-500 outline-none font-medium cursor-pointer transition-all">
                     <option>Google Gemini 2.0 Flash (Tốc độ cao 0.2s)</option>
                     <option>Google Gemini 1.5 Pro (Phân tích so sánh chuyên sâu)</option>
-                    <option>Alibaba-Store Fine-tuned Retail Model v2.4</option>
+                    <option>Zentro Store Fine-tuned Retail Model v2.4</option>
                   </select>
                 </div>
                 <div>
