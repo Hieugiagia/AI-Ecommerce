@@ -13,7 +13,6 @@ import {
   Check,
   Heart,
   Gift,
-  MapPin,
   Phone,
   CreditCard,
   Box,
@@ -24,6 +23,12 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import ProductCard from '../components/ProductCard';
 import { productService } from '../services/productService';
+import { loadProductOptions } from '../services/productOptionsService';
+import { optionPurchase } from '../services/productOptionsModel';
+import ProductOptions from '../components/ProductOptions';
+import { formatDisplayDate } from '../services/dateDisplay';
+import '../styles/product-options.css';
+import { STORE_CONFIG } from '../config/storeConfig';
 
 export default function ProductDetailPage() {
   const { id } = useParams();
@@ -35,8 +40,11 @@ export default function ProductDetailPage() {
   const [product, setProduct] = useState(null);
   const [activeImage, setActiveImage] = useState('');
   const [relatedProducts, setRelatedProducts] = useState([]);
-  const [selectedVariant, setSelectedVariant] = useState(null);
-  const [selectedColor, setSelectedColor] = useState(null);
+  const [optionsData, setOptionsData] = useState(null);
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [optionsState, setOptionsState] = useState({ loading: true, error: '' });
+  const [optionsRetry, setOptionsRetry] = useState(0);
+  const [optionsForSlug, setOptionsForSlug] = useState('');
   const [detailState, setDetailState] = useState({ id: null, error: '' });
   const [retry, setRetry] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -49,8 +57,7 @@ export default function ProductDetailPage() {
         if (!active) return;
         setProduct(data);
         setRelatedProducts([]);
-        setSelectedVariant(data?.variants?.[0] || null);
-        setSelectedColor(data?.colors?.[0] || null);
+
         setActiveImage(data?.image || '');
         setQuantity(1);
         setDetailState({ id, error: '' });
@@ -75,6 +82,25 @@ export default function ProductDetailPage() {
     fetchDetail();
     return () => { active = false; };
   }, [id, retry]);
+  useEffect(() => {
+    if (!product) return;
+    let active = true;
+    setOptionsData(null); setSelectedOption(null);
+    setOptionsState({ loading: true, error: '' }); setAddError(''); setIsAdded(false);
+    loadProductOptions(product).then(data => {
+      if (!active) return;
+      setOptionsData(data); setOptionsForSlug(product.slug);
+      const initial = data?.options.find(option => option.slug === data.initialSlug) || null;
+      setSelectedOption(initial);
+      if (initial?.image) setActiveImage(initial.image);
+      setOptionsState({ loading: false, error: '' });
+    }).catch(error => { if (active) setOptionsState({ loading: false, error: error.message }); });
+    return () => { active = false; };
+  }, [product, optionsRetry]);
+  function selectOption(option) {
+    setSelectedOption(option); setQuantity(1); setAddError(''); setIsAdded(false);
+    setActiveImage(option?.image || product.image);
+  }
   const [activeTab, setActiveTab] = useState('specs'); // 'specs', 'desc', 'reviews'
   const [isAdded, setIsAdded] = useState(false);
   const [isWishlist, setIsWishlist] = useState(false);
@@ -88,7 +114,7 @@ export default function ProductDetailPage() {
       rating: 5,
       date: '2 ngày trước',
       verified: true,
-      comment: 'Máy cầm rất đầm tay, viền titan nhẹ hơn hẳn bản tiền nhiệm. Màu Titan Tự Nhiên ở ngoài đẹp sang trọng, giao hàng Alibaba-Store nhanh trong 1 giờ!',
+      comment: 'Máy cầm rất đầm tay, viền titan nhẹ hơn hẳn bản tiền nhiệm. Màu Titan Tự Nhiên ở ngoài đẹp sang trọng, giao hàng Zentro Store nhanh trong 1 giờ!',
       likes: 14,
     },
     {
@@ -122,7 +148,7 @@ export default function ProductDetailPage() {
     if (!newReviewText.trim()) return;
     const newRev = {
       id: Date.now(),
-      author: isAuthenticated ? 'Khách hàng thân thiết' : 'Khách hàng Alibaba-Store',
+      author: isAuthenticated ? 'Khách hàng thân thiết' : 'Khách hàng Zentro Store',
       avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=80&auto=format&fit=crop&q=80',
       rating: newRating,
       date: 'Vừa xong',
@@ -146,8 +172,14 @@ export default function ProductDetailPage() {
     return <div className="p-12 text-center"><h1 className="text-xl font-bold">Không tìm thấy sản phẩm</h1><p className="mt-2">Sản phẩm không tồn tại hoặc hiện chưa được công khai.</p><Link className="mt-4 inline-block text-indigo-600 underline" to="/products">Xem các sản phẩm khác</Link></div>;
   }
 
-  const currentPrice = product.price + (selectedVariant?.priceDelta || 0);
-  const currentOriginalPrice = product.originalPrice + (selectedVariant?.priceDelta || 0);
+  const hasOptions = !!optionsData?.options.length;
+  const purchaseProduct = optionsForSlug !== product.slug || optionsState.loading || optionsState.error ? null : hasOptions ? optionPurchase(selectedOption) : product;
+  const currentPrice = hasOptions ? selectedOption?.product?.price ?? selectedOption?.referencePrice ?? product.price : product.price;
+  const currentOriginalPrice = hasOptions ? currentPrice : product.originalPrice;
+  const currentStock = purchaseProduct?.stock || 0;
+  const displayName = selectedOption?.product?.name || selectedOption?.name || product.name;
+  const specs = selectedOption ? selectedOption.specs || {} : optionsData?.specs || product.specs || {};
+  const canPurchase = !!purchaseProduct && currentStock > 0 && purchaseProduct.status === 'PUBLISHED';
 
   const formatVND = (price) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
@@ -159,7 +191,11 @@ export default function ProductDetailPage() {
 
   const addProduct = async () => {
     setAddError('');
-    const result = await addToCart(product, quantity, selectedVariant, selectedColor);
+    if (!canPurchase) {
+      const result = { success: false, error: 'Vui lòng chọn phiên bản đang mở bán.' };
+      setAddError(result.error); return result;
+    }
+    const result = await addToCart(purchaseProduct, quantity);
     if (result.requiresAuth) navigate('/login', { state: { from: { pathname: '/products/' + id } } });
     else if (!result.success) setAddError(result.error);
     return result;
@@ -193,7 +229,7 @@ export default function ProductDetailPage() {
         <span className="font-semibold text-slate-700">{product.brand}</span>
         <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
         <span className="text-slate-900 font-bold truncate max-w-xs sm:max-w-md">
-          {product.name}
+          {displayName}
         </span>
       </nav>
 
@@ -215,7 +251,7 @@ export default function ProductDetailPage() {
             )}
           </div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight leading-snug">
-            {product.name}
+            {displayName}
           </h1>
         </div>
 
@@ -229,7 +265,7 @@ export default function ProductDetailPage() {
 
           <div className="hidden sm:flex items-center gap-1.5 text-slate-600 bg-slate-50 border border-slate-200/80 px-3.5 py-1.5 rounded-full">
             <Phone className="w-3.5 h-3.5 text-indigo-600" />
-            <span>Hotline: <strong className="text-indigo-600 font-bold">1800.2097</strong></span>
+            <span>Hotline: <strong className="text-indigo-600 font-bold">{STORE_CONFIG.hotlineFormatted}</strong></span>
           </div>
         </div>
       </div>
@@ -246,7 +282,7 @@ export default function ProductDetailPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3 }}
               src={activeImage}
-              alt={product.name}
+              alt={displayName}
               className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-500 ease-out"
             />
 
@@ -320,7 +356,7 @@ export default function ProductDetailPage() {
                 <Truck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                 <div>
                   <strong className="text-slate-900 block">Giao nhanh 2 giờ</strong>
-                  <span>Nội thành hoặc nhận tại 120 cửa hàng</span>
+                  <span>Kiểm tra địa chỉ và phí giao hàng khi thanh toán</span>
                 </div>
               </div>
               <div className="flex items-start gap-2.5 p-3 bg-slate-50 rounded-2xl border border-slate-100">
@@ -361,6 +397,7 @@ export default function ProductDetailPage() {
         <div className="lg:col-span-6 space-y-6">
           {/* 1. KHỐI GIÁ NỔI BẬT */}
           <div className="p-6 bg-slate-50/90 border border-slate-200/80 rounded-3xl space-y-3.5">
+            {hasOptions && <p className="text-sm font-semibold text-slate-600">{selectedOption?.version} {selectedOption?.color && '· ' + selectedOption.color}{!selectedOption?.product && <span className="ml-2 text-amber-700">(Đơn giá tham khảo)</span>}</p>}
             <div className="flex flex-wrap items-baseline gap-3">
               <span className="text-3xl sm:text-4xl font-black text-slate-900 tracking-tight">
                 {formatVND(currentPrice)}
@@ -387,75 +424,9 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          {/* 2. CHỌN PHIÊN BẢN / DUNG LƯỢNG */}
-          {product.variants && product.variants.length > 0 && (
-            <div className="space-y-2.5">
-              <label className="block text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Chọn Phiên bản / Bộ nhớ:
-              </label>
-              <div className="grid grid-cols-3 gap-2.5">
-                {product.variants.map((v) => {
-                  const isSelected = selectedVariant?.name === v.name;
-                  const vPrice = product.price + (v.priceDelta || 0);
-                  return (
-                    <motion.button
-                      key={v.name}
-                      whileHover={{ scale: 1.01 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setSelectedVariant(v)}
-                      className={`p-3.5 rounded-2xl text-left border transition-all cursor-pointer flex flex-col justify-between ${
-                        isSelected
-                          ? 'border-indigo-600 bg-indigo-50/40 text-slate-900 ring-2 ring-indigo-500/20 shadow-xs'
-                          : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-xs sm:text-sm">{v.name}</span>
-                        {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600 font-bold" />}
-                      </div>
-                      <span className="text-[11px] font-semibold text-indigo-600 mt-1">
-                        {formatVND(vPrice)}
-                      </span>
-                    </motion.button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* 3. CHỌN MÀU SẮC */}
-          {product.colors && product.colors.length > 0 && (
-            <div className="space-y-2.5">
-              <label className="block text-xs font-bold text-slate-900 uppercase tracking-wider">
-                Chọn Màu sắc: <span className="text-indigo-600 font-bold ml-1">{selectedColor?.name}</span>
-              </label>
-              <div className="flex flex-wrap gap-2.5">
-                {product.colors.map((c) => {
-                  const isSelected = selectedColor?.name === c.name;
-                  return (
-                    <motion.button
-                      key={c.name}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      onClick={() => setSelectedColor(c)}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-2xl border text-xs font-semibold transition-all cursor-pointer ${
-                        isSelected
-                          ? 'border-indigo-600 bg-indigo-50/50 text-indigo-900 ring-2 ring-indigo-500/20 shadow-xs'
-                          : 'border-slate-200 bg-white text-slate-700 hover:border-slate-300'
-                      }`}
-                    >
-                      <span
-                        className="w-4 h-4 rounded-full border border-slate-300 shrink-0"
-                        style={{ backgroundColor: c.code }}
-                      />
-                      <span>{c.name}</span>
-                    </motion.button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
+          <ProductOptions data={optionsData} selected={selectedOption} onSelect={selectOption}
+            loading={optionsState.loading} error={optionsState.error}
+            onRetry={() => setOptionsRetry(value => value + 1)}/>
           {/* 4. HỘP KHUYẾN MÃI ĐẶC QUYỀN */}
           <div className="border border-indigo-200/80 bg-indigo-50/20 rounded-3xl p-5 space-y-3">
             <div className="flex items-center gap-2 text-indigo-900 font-bold text-xs sm:text-sm uppercase tracking-wide">
@@ -490,22 +461,6 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          {/* 5. CỬA HÀNG CÒN HÀNG */}
-          <div className="p-4 bg-white border border-slate-200/80 rounded-3xl space-y-2 text-xs text-slate-600 shadow-2xs">
-            <div className="flex items-center justify-between text-slate-900 font-bold">
-              <span className="flex items-center gap-1.5">
-                <MapPin className="w-4 h-4 text-indigo-600" />
-                <span>Có 8 cửa hàng sẵn hàng giao ngay:</span>
-              </span>
-              <span className="text-[11px] text-emerald-600 font-semibold">Còn {product.stock} máy</span>
-            </div>
-            <ul className="space-y-1 pl-5 list-disc text-[11px] text-slate-500">
-              <li>136 Nguyễn Thái Học, Quận 1, TP.HCM</li>
-              <li>288 Đường 3/2, Quận 10, TP.HCM</li>
-              <li>Toà Keangnam Landmark 72, Nam Từ Liêm, Hà Nội</li>
-            </ul>
-          </div>
-
           {/* 6. CHỌN SỐ LƯỢNG */}
           <div className="flex items-center gap-4">
             <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
@@ -522,8 +477,8 @@ export default function ProductDetailPage() {
                 {quantity}
               </span>
               <button
-                disabled={cartBusy || quantity >= product.stock}
-                onClick={() => setQuantity((q) => Math.min(product.stock, q + 1))}
+                disabled={cartBusy || quantity >= currentStock}
+                onClick={() => setQuantity((q) => Math.min(currentStock, q + 1))}
                 className="px-4 py-2 text-slate-600 hover:bg-slate-100 transition-colors font-bold cursor-pointer"
               >
                 +
@@ -532,7 +487,7 @@ export default function ProductDetailPage() {
           </div>
 
           {addError && <p role="alert" className="text-sm text-rose-700">{addError}</p>}
-          {product.stock <= 0 && <p className="text-sm text-amber-700">Sản phẩm hiện đã hết hàng.</p>}
+          {!optionsState.loading && !optionsState.error && (selectedOption?.product || !hasOptions) && currentStock <= 0 && <p className="text-sm text-amber-700">Sản phẩm hiện đã hết hàng.</p>}
           {/* 7. CỤM NÚT MUA HÀNG (SaaS MotionSites Style) */}
           <div className="space-y-3 pt-2">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -541,7 +496,7 @@ export default function ProductDetailPage() {
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleBuyNow}
-                disabled={cartBusy || product.stock <= 0 || product.status !== 'PUBLISHED'}
+                disabled={cartBusy || !canPurchase}
                 className="w-full py-4 px-4 bg-gradient-to-r from-indigo-600 via-violet-600 to-purple-600 hover:from-indigo-500 hover:to-violet-500 text-white rounded-2xl font-black text-sm uppercase transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/35 cursor-pointer flex flex-col items-center justify-center"
               >
                 <span className="flex items-center gap-1.5 text-base tracking-wide">
@@ -558,7 +513,7 @@ export default function ProductDetailPage() {
                 whileHover={{ scale: 1.01 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={handleBuyNow}
-                disabled={cartBusy || product.stock <= 0 || product.status !== 'PUBLISHED'}
+                disabled={cartBusy || !canPurchase}
                 className="w-full py-4 px-4 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-sm uppercase transition-all shadow-md shadow-slate-900/10 cursor-pointer flex flex-col items-center justify-center"
               >
                 <span className="flex items-center gap-1.5 text-base tracking-wide">
@@ -575,7 +530,7 @@ export default function ProductDetailPage() {
             <motion.button
               whileTap={{ scale: 0.98 }}
               onClick={handleAddToCart}
-              disabled={cartBusy || isAdded || product.stock <= 0 || product.status !== 'PUBLISHED'}
+              disabled={cartBusy || isAdded || !canPurchase}
               className={`w-full py-3.5 px-6 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer border ${
                 isAdded
                   ? 'bg-emerald-600 text-white border-emerald-600 shadow-md shadow-emerald-500/20'
@@ -589,7 +544,7 @@ export default function ProductDetailPage() {
               ) : (
                 <>
                   <ShoppingCart className="w-4 h-4 text-indigo-600" />
-                  <span>Thêm vào giỏ hàng (Để mua sau hoặc gom đơn)</span>
+                  <span>Thêm vào giỏ hàng</span>
                 </>
               )}
             </motion.button>
@@ -635,17 +590,17 @@ export default function ProductDetailPage() {
         {/* Tab Content Area */}
         <div className="py-6">
           {/* TAB 1: BẢNG THÔNG SỐ KỸ THUẬT */}
-          {activeTab === 'specs' && product.specs && (
+          {activeTab === 'specs' && (
             <div className="max-w-3xl bg-white border border-slate-200/80 rounded-3xl overflow-hidden shadow-xs">
               <div className="p-4 bg-slate-50/80 border-b border-slate-100 flex items-center justify-between">
                 <span className="font-bold text-xs sm:text-sm text-slate-900">
-                  Cấu hình phần cứng &amp; Thông số kỹ thuật {product.name}
+                  Cấu hình phần cứng &amp; Thông số kỹ thuật {displayName}
                 </span>
-                <span className="text-[11px] text-slate-400">Nguồn: Nhà sản xuất</span>
+                
               </div>
-              <table className="w-full text-xs sm:text-sm">
+              <table className="product-specs-table w-full text-sm">
                 <tbody>
-                  {Object.entries(product.specs).map(([key, value], idx) => (
+                  {Object.entries(specs).map(([key, value], idx) => (
                     <tr
                       key={key}
                       className={idx % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}
@@ -660,6 +615,8 @@ export default function ProductDetailPage() {
                   ))}
                 </tbody>
               </table>
+              {!Object.keys(specs).length && <p className="p-5 text-slate-500">{optionsState.loading ? 'Đang tải thông số…' : 'Sản phẩm này chưa có bảng thông số được xác minh.'}</p>}
+              {optionsData && <p className="product-spec-source">Tham khảo <a href={selectedOption?.sourceUrl || optionsData.sourceUrl} target="_blank" rel="noreferrer">{optionsData.sourceName || 'CellphoneS'}</a> · Cập nhật {formatDisplayDate(optionsData.referenceDate, { timeZone: 'UTC' })}. Giá bán và tồn kho tại Zentro Store được hiển thị theo phiên bản đang chọn.</p>}
             </div>
           )}
 
@@ -668,15 +625,15 @@ export default function ProductDetailPage() {
             <div className="max-w-4xl space-y-6 bg-white border border-slate-200/80 rounded-3xl p-6 sm:p-8 shadow-xs">
               <div className="prose prose-slate max-w-none text-xs sm:text-sm text-slate-600 leading-relaxed space-y-4">
                 <h3 className="text-lg sm:text-xl font-bold text-slate-900">
-                  Trải nghiệm công nghệ thế hệ mới cùng {product.name}
+                  Trải nghiệm công nghệ thế hệ mới cùng {displayName}
                 </h3>
                 <p className="whitespace-pre-line">{product.description}</p>
                 <div className="p-4 bg-indigo-50/40 rounded-2xl border border-indigo-100 text-slate-700">
                   <h4 className="font-bold text-sm text-indigo-900 mb-1">
-                    Vì sao nên chọn mua tại Alibaba-Store?
+                    Vì sao nên chọn mua tại Zentro Store?
                   </h4>
                   <p className="text-xs text-slate-600">
-                    Alibaba-Store cam kết 100% sản phẩm là hàng chính hãng được phân phối chính thức tại thị trường Việt Nam. Hệ thống hỗ trợ khách hàng kiểm tra máy trực tiếp, cài đặt ứng dụng miễn phí và chế độ bảo hành chuẩn ủy quyền.
+                    Zentro Store cam kết 100% sản phẩm là hàng chính hãng được phân phối chính thức tại thị trường Việt Nam. Hệ thống hỗ trợ khách hàng kiểm tra máy trực tiếp, cài đặt ứng dụng miễn phí và chế độ bảo hành chuẩn ủy quyền.
                   </p>
                 </div>
               </div>
@@ -804,7 +761,7 @@ export default function ProductDetailPage() {
                             </span>
                             {rev.verified && (
                               <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100 flex items-center gap-1">
-                                <Check className="w-3 h-3" /> Đã mua tại Alibaba-Store
+                                <Check className="w-3 h-3" /> Đã mua tại Zentro Store
                               </span>
                             )}
                           </div>

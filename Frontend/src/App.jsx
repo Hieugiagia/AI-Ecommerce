@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
 import { AuthProvider } from './context/AuthContext';
-import Navbar from './components/Navbar';
+import Navbar from './components/navbar';
 import Footer from './components/Footer';
 import AiChatWidget from './components/AiChatWidget';
 import ScrollToTop from './components/ScrollToTop';
@@ -32,18 +32,20 @@ import AdminCategoriesPage from './pages/admin/AdminCategoriesPage';
 
 // Customer Layout với Navbar, Footer và Floating AI Widget riêng
 function CustomerLayout({ isAiOpen, setIsAiOpen }) {
+  const { pathname } = useLocation();
+  const isAuthPage = ["/login", "/register", "/forgot-password", "/reset-password"].includes(pathname);
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col antialiased selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col antialiased selection:bg-orange-600 selection:text-white">
       <ScrollToTop />
-      <Navbar onOpenAiChat={() => setIsAiOpen(true)} />
-      <main className="flex-1">
+      {!isAuthPage && <Navbar onOpenAiChat={() => setIsAiOpen(true)} />}
+      <main className="flex-1 store-content commerce-theme">
         <Outlet />
       </main>
-      <Footer />
-      <AiChatWidget
+      {pathname !== '/login' && pathname !== '/register' && <Footer />}
+      {!isAuthPage && <div className="commerce-theme"><AiChatWidget
         isOpen={isAiOpen}
         onClose={() => setIsAiOpen(!isAiOpen)}
-      />
+      /></div>}
     </div>
   );
 }

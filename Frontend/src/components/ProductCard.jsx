@@ -1,182 +1,19 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { Star, ShoppingCart, Check, Sparkles, Flame } from 'lucide-react';
+import { ShoppingBag, Check } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
-export default function ProductCard({ product, isFlashSale = false, soldCount = 45 }) {
-  const { addToCart, cartBusy } = useCart();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [addError, setAddError] = useState('');
-  const [isAdded, setIsAdded] = useState(false);
-
-  const handleAddToCart = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setAddError('');
-    const result = await addToCart(product);
-    if (result.requiresAuth) {
-      navigate('/login', { state: { from: { pathname: location.pathname, search: location.search } } });
-    } else if (result.success) {
-      setIsAdded(true);
-      setTimeout(() => setIsAdded(false), 1500);
-    } else setAddError(result.error);
-  };
-
-  const formatVND = (price) => {
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
-  };
-
-  const price = typeof product.price === 'string' ? parseFloat(product.price) : Number(product.price) || 0;
-  const originalPrice = product.originalPrice
-    ? (typeof product.originalPrice === 'string' ? parseFloat(product.originalPrice) : Number(product.originalPrice))
-    : 0;
-  const discountPercent = originalPrice > price
-    ? Math.round(((originalPrice - price) / originalPrice) * 100)
-    : 0;
-
-  const productImage =
-    product.thumbnailUrl ||
-    product.image ||
-    product.thumbnail_url ||
-    'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500';
-
-  return (
-    <motion.div
-      whileHover={{ y: -6, scale: 1.01 }}
-      transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-      className="group relative bg-white border border-slate-200/80 rounded-2xl overflow-hidden hover:border-indigo-300/80 hover:shadow-xl hover:shadow-indigo-500/10 transition-all duration-300 flex flex-col justify-between"
-    >
-      <Link to={`/product/${product.slug || product.id}`} className="block flex-1 flex flex-col">
-        {/* Ảnh sản phẩm */}
-        <div className="relative aspect-square overflow-hidden bg-slate-50/70 p-4 flex items-center justify-center">
-          <img
-            src={productImage}
-            alt={product.name}
-            className="w-full h-full object-contain group-hover:scale-106 transition-transform duration-500 ease-out"
-            loading="lazy"
-          />
-
-          {/* Badges góc trái */}
-          <div className="absolute top-2.5 left-2.5 flex flex-col gap-1.5 z-10">
-            {discountPercent > 0 && (
-              <span className="bg-slate-900 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs">
-                -{discountPercent}%
-              </span>
-            )}
-            <span className="bg-white/90 backdrop-blur-xs text-slate-700 border border-slate-200/80 text-[10px] font-medium px-2 py-0.5 rounded-full shadow-xs">
-              0% Trả góp
-            </span>
-          </div>
-
-          {/* Tag AI hoặc Best Seller góc phải */}
-          {product.tag && (
-            <div className="absolute top-2.5 right-2.5 z-10">
-              <span className="inline-flex items-center gap-1 bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-200/60 text-indigo-700 text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs">
-                <Sparkles className="w-2.5 h-2.5 text-indigo-500 animate-pulse" />
-                {product.tag}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Nội dung thông tin sản phẩm */}
-        <div className="p-4 flex-1 flex flex-col justify-between">
-          <div>
-            {/* Tên thương hiệu nhỏ */}
-            {product.brand && (
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
-                {product.brand}
-              </p>
-            )}
-
-            {/* Tên sản phẩm */}
-            <h3 className="font-bold text-xs sm:text-sm text-slate-900 line-clamp-2 mb-2 group-hover:text-indigo-600 transition-colors leading-snug">
-              {product.name}
-            </h3>
-
-            {/* Giá bán */}
-            <div className="flex items-baseline gap-2 mb-2.5">
-              <span className="text-sm sm:text-base font-extrabold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                {formatVND(product.price)}
-              </span>
-              {product.originalPrice > product.price && (
-                <span className="text-[11px] text-slate-400 line-through font-medium">
-                  {formatVND(product.originalPrice)}
-                </span>
-              )}
-            </div>
-
-            {/* Khuyến mãi nổi bật (Hộp promo phong cách SaaS tinh tế) */}
-            <div className="bg-slate-50/80 border border-slate-100 rounded-xl p-2 mb-2.5 text-[10px] text-slate-600 space-y-1">
-              <p className="flex items-center gap-1 font-medium text-slate-700 truncate">
-                <span className="text-indigo-500 font-bold">•</span> Trợ giá thu cũ đến 2.000.000đ
-              </p>
-              <p className="flex items-center gap-1 text-slate-500 truncate">
-                <span className="text-violet-500 font-bold">•</span> Tích 1% điểm hội viên AI Club
-              </p>
-            </div>
-
-            {/* Flash Sale Stock Bar (nếu là mục Flash Sale) */}
-            {isFlashSale && (
-              <div className="space-y-1 my-2">
-                <div className="flex items-center justify-between text-[10px] font-bold text-indigo-600">
-                  <span className="flex items-center gap-1">
-                    <Flame className="w-3 h-3 text-orange-500" />
-                    Đã bán {soldCount}/100
-                  </span>
-                  <span className="text-slate-500">Sắp hết</span>
-                </div>
-                <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                  <div
-                    className="bg-gradient-to-r from-indigo-500 via-violet-500 to-purple-500 h-full rounded-full"
-                    style={{ width: `${Math.min(100, (soldCount / 100) * 100)}%` }}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Rating & Sold count */}
-          <div className="flex items-center justify-between text-[11px] text-slate-500 pt-2 border-t border-slate-100">
-            <div className="flex items-center gap-1 font-medium text-slate-700">
-              <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-              <span>{product.rating}</span>
-              <span className="text-slate-400 text-[10px]">({product.ratingCount || 100})</span>
-            </div>
-            <span className="text-[10px] text-slate-400">Đã bán {product.sold || 50}</span>
-          </div>
-        </div>
-      </Link>
-
-      {/* Nút hành động */}
-      <div className="p-4 pt-0">
-        <motion.button
-          whileTap={{ scale: 0.96 }}
-          onClick={handleAddToCart}
-          disabled={isAdded || cartBusy || product.stock === 0 || product.status === 'OUT_OF_STOCK'}
-          className={`w-full py-2 px-3 rounded-xl font-semibold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs ${
-            isAdded
-              ? 'bg-emerald-600 text-white shadow-emerald-500/20'
-              : 'bg-slate-100 hover:bg-slate-900 text-slate-800 hover:text-white border border-slate-200/80 hover:border-slate-900'
-          }`}
-          title="Thêm vào giỏ hàng"
-        >
-          {isAdded ? (
-            <>
-              <Check className="w-3.5 h-3.5" />
-              <span>Đã thêm vào giỏ</span>
-            </>
-          ) : (
-            <>
-              <ShoppingCart className="w-3.5 h-3.5" />
-              <span>{product.stock === 0 || product.status === 'OUT_OF_STOCK' ? 'Hết hàng' : 'Thêm vào giỏ'}</span>
-            </>
-          )}
-        </motion.button>
-        {addError && <p role="alert" className="mt-2 text-xs text-rose-700">{addError}</p>}
-      </div>
-    </motion.div>
-  );
+export default function ProductCard({ product }) {
+ const {addToCart,cartBusy}=useCart();const navigate=useNavigate();const location=useLocation();
+ const [addError,setAddError]=useState('');const [isAdded,setIsAdded]=useState(false);
+ async function handleAddToCart(event){event.preventDefault();event.stopPropagation();setAddError('');const result=await addToCart(product);if(result.requiresAuth){navigate('/login',{state:{from:{pathname:location.pathname,search:location.search}}});}else if(result.success){setIsAdded(true);setTimeout(()=>setIsAdded(false),1500);}else setAddError(result.error);}
+ const money=value=>new Intl.NumberFormat('vi-VN',{style:'currency',currency:'VND'}).format(value);
+ const price=Number(product.price)||0;const original=Number(product.originalPrice)||0;
+ const discount=original>price?Math.round((original-price)/original*100):0;
+ const image=product.thumbnailUrl||product.image||product.thumbnail_url||'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=500';
+ const out=product.stock===0||product.status==='OUT_OF_STOCK';
+ return <article className="store-product-card">
+  <Link to={'/product/'+(product.slug||product.id)} className="store-product-main"><div className="store-product-image"><img src={image} alt={product.name} loading="lazy"/>{discount>0&&<span className="store-product-discount">-{discount}%</span>}</div><div className="store-product-info">{product.brand&&<p className="store-product-brand">{product.brand}</p>}<h3>{product.name}</h3><div className="store-product-prices"><strong>{money(price)}</strong>{original>price&&<del>{money(original)}</del>}</div><p className="store-product-stock">{out?'Tạm hết hàng':'Sẵn sàng đặt hàng'}</p></div></Link>
+  <div className="store-product-bottom"><button onClick={handleAddToCart} disabled={isAdded||cartBusy||out}>{isAdded?<Check size={16}/>:<ShoppingBag size={16}/>}<span>{isAdded?'Đã thêm vào giỏ':out?'Hết hàng':'Thêm vào giỏ'}</span></button>{addError&&<p role="alert" className="store-product-error">{addError}</p>}</div>
+ </article>;
 }

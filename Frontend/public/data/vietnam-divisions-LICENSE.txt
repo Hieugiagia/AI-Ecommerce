@@ -1,0 +1,43 @@
+Dữ liệu mở đơn vị hành chính Việt Nam - Địa Chỉ Việt (diachiviet.com)
+Ngày dựng: 2026-11-05. Dữ liệu theo văn bản có hiệu lực đến 20/09/2026.
+
+GIẤY PHÉP
+Phần tổng hợp, chuẩn hoá và đối chiếu của Địa Chỉ Việt được cấp phép Creative Commons Ghi công 4.0 Quốc tế (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/deed.vi
+Bạn được sao chép, phân phối lại, chỉnh sửa và dùng cho mục đích thương mại, với điều kiện ghi nguồn, ví dụ:
+  "Nguồn: Địa Chỉ Việt (diachiviet.com), dữ liệu mở đơn vị hành chính, CC BY 4.0" kèm liên kết https://diachiviet.com/du-lieu-mo/
+
+NGUỒN GỐC DỮ LIỆU
+- Danh mục và mã số đơn vị hành chính: Quyết định 19/2025/QĐ-TTg và các văn bản cập nhật của Cục Thống kê; các nghị quyết sắp xếp đơn vị hành chính của Quốc hội, Ủy ban Thường vụ Quốc hội.
+- Mã bưu chính: Quyết định 2334/QĐ-BKHCN ngày 24/08/2025 của Bộ Khoa học và Công nghệ.
+- Diện tích, quy mô dân số cấp xã: số liệu trong các nghị quyết sắp xếp đơn vị hành chính cấp xã năm 2025 của Ủy ban Thường vụ Quốc hội (tổng hợp qua sapnhap.bando.com.vn). Quy mô dân số là số liệu của đề án sắp xếp, không phải số điều tra dân số.
+- Danh mục đơn vị hành chính trước 01/07/2025 (bản 01/03/2025): thanglequoc/vietnamese-provinces-database (giấy phép MIT, nguyên văn trong giay-phep.txt), theo danh mục của Tổng cục Thống kê.
+Văn bản quy phạm pháp luật và văn bản hành chính không thuộc đối tượng bảo hộ quyền tác giả (Điều 15 Luật Sở hữu trí tuệ).
+
+LƯU Ý
+Dữ liệu tham khảo, có thể có sai sót. Giấy tờ chính thức theo xác nhận của cơ quan có thẩm quyền. Báo lỗi: https://diachiviet.com/lien-he/
+
+----------------------------------------------------------------
+thanglequoc/vietnamese-provinces-database
+
+MIT License
+
+Copyright (c) 2021 Thang Le Quoc
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

@@ -1,3 +1,4 @@
+import { formatDisplayDateTime } from '../../services/dateDisplay';
 import { useEffect, useId, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Eye, X } from 'lucide-react';
@@ -8,7 +9,7 @@ import { ORDER_STATUSES, PAYMENT_METHODS, PAYMENT_STATUSES } from '../../service
 const button = 'rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold disabled:opacity-50';
 const input = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm';
 const money = (value) => value == null ? 'Chưa có thông tin' : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
-const date = (value) => !value || Number.isNaN(new Date(value).getTime()) ? 'Chưa có thông tin' : new Date(value).toLocaleString('vi-VN');
+const date = formatDisplayDateTime;
 const actionLabels = { CONFIRMED: 'Xác nhận đơn', PROCESSING: 'Bắt đầu đóng gói', SHIPPED: 'Bàn giao vận chuyển', DELIVERED: 'Hoàn tất giao hàng và thu COD' };
 
 function Modal({ title, busy, onClose, children }) {

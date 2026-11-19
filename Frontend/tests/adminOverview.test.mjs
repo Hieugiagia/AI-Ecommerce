@@ -29,3 +29,52 @@ test('14-day activity crosses month boundary without changing loaded order scope
   assert.equal(buckets.at(-1).key,'2026-11-05');
   assert.equal(buckets.reduce((sum,day)=>sum+day.count,0),1);
 });
+
+import { salesOverview } from '../src/services/adminOverviewModel.js';
+
+const snapshotOrder = (overrides = {}) => ({ order: {
+  status: 'DELIVERED', paymentMethod: 'COD', paymentStatus: 'SUCCESS',
+  subtotal: 1000000, shippingFee: 30000, total: 1030000,
+  items: [{ quantity: 2 }], ...overrides,
+} });
+
+test('sales revenue recognizes only delivered and paid merchandise, excluding shipping', () => {
+  const summary = salesOverview([
+    snapshotOrder(), snapshotOrder({ subtotal: 2000000, total: 2030000, paymentMethod: 'VNPAY' }),
+    snapshotOrder({ status: 'PENDING', paymentStatus: 'PENDING' }),
+    snapshotOrder({ status: 'CANCELLED' }),
+    snapshotOrder({ paymentStatus: 'REFUNDED' }),
+    snapshotOrder({ status: 'PROCESSING' }),
+  ]);
+  assert.equal(summary.revenue, 3000000);
+  assert.equal(summary.completedOrders, 2);
+  assert.equal(summary.averageOrder, 1500000);
+  assert.equal(summary.unitsSold, 4);
+});
+
+test('pending collection includes only open unpaid COD orders including shipping', () => {
+  const summary = salesOverview([
+    ...['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED'].map(status =>
+      snapshotOrder({ status, paymentStatus: 'PENDING' })),
+    snapshotOrder({ status: 'CANCELLED', paymentStatus: 'PENDING' }),
+    snapshotOrder({ status: 'SHIPPED', paymentMethod: 'VNPAY', paymentStatus: 'PENDING' }),
+    snapshotOrder(),
+  ]);
+  assert.equal(summary.pendingCollection, 4120000);
+  assert.equal(summary.pendingOrders, 4);
+});
+
+test('empty or no completed orders has no average sale instead of a fabricated value', () => {
+  const summary = salesOverview([]);
+  assert.equal(summary.revenue, 0);
+  assert.equal(summary.pendingCollection, 0);
+  assert.equal(summary.completedOrders, 0);
+  assert.equal(summary.averageOrder, null);
+});
+
+test('revenue derives merchandise from total minus shipping, but never guesses missing fees', () => {
+  assert.equal(salesOverview([snapshotOrder({ subtotal: null })]).revenue, 1000000);
+  const unknown = salesOverview([snapshotOrder({ subtotal: null, shippingFee: null })]);
+  assert.equal(unknown.revenue, null);
+  assert.equal(unknown.averageOrder, null);
+});

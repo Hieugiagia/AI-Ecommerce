@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "./styles/commerce.css";
+@import "./styles/refinements.css";
 
 @layer base {
   body {

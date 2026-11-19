@@ -9,7 +9,7 @@ export const CATEGORIES = [
 ];
 
 export const VOUCHERS = [
-  { code: 'ALIBABA10', discount: 0.1, maxDiscount: 1000000, description: 'Giảm 10% tối đa 1 triệu cho đơn hàng Alibaba Store' },
+  { code: 'ZENTRO10', discount: 0.1, maxDiscount: 1000000, description: 'Giảm 10% tối đa 1 triệu cho đơn hàng Zentro Store' },
   { code: 'FREESHIP', discount: 50000, minOrder: 500000, description: 'Miễn phí vận chuyển 50.000đ cho đơn từ 500k' },
   { code: 'WELCOME50K', discount: 50000, minOrder: 300000, description: 'Giảm ngay 50.000đ cho khách hàng mới' },
 ];

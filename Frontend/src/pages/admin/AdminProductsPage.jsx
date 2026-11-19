@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, Edit2, Trash2, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Download } from 'lucide-react';
 import { productService } from '../../services/productService';
 import { apiRequest } from '../../services/api';
+import CatalogImportDialog from '../../components/admin/CatalogImportDialog';
 
 const statuses = {
   PUBLISHED: 'Đang mở bán',
@@ -33,6 +34,7 @@ export default function AdminProductsPage() {
   const [total, setTotal] = useState(0);
   const [refresh, setRefresh] = useState(0);
   const [form, setForm] = useState(null);
+  const [importOpen, setImportOpen] = useState(false);
   const [formError, setFormError] = useState('');
   const [conflict, setConflict] = useState(false);
   const [deleting, setDeleting] = useState(null);
@@ -131,7 +133,7 @@ export default function AdminProductsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl bg-white p-6 border border-slate-200">
         <div><h1 className="text-2xl font-bold">Quản lý sản phẩm</h1><p className="text-sm text-slate-500 mt-1">Giá bán, tồn kho và trạng thái niêm yết</p></div>
-        <button disabled={busy || loading || !!categoryError || !activeCategories.length} className={`${buttonClass} bg-indigo-600 text-white flex gap-2 items-center`} onClick={() => { setForm({ ...emptyForm(), categoryId: String(activeCategories[0]?.id || '') }); setFormError(''); setConflict(false); }}><Plus size={16} />Thêm sản phẩm</button>
+        <div className="flex flex-wrap gap-3"><button className={buttonClass} disabled={busy} onClick={() => setImportOpen('options')}><Download size={16} className="mr-2 inline"/>Nhập phiên bản & màu</button><button className={buttonClass} disabled={busy} onClick={() => setImportOpen('products')}><Download size={16} className="mr-2 inline"/>Nhập bộ sản phẩm mẫu</button>        <button disabled={busy || loading || !!categoryError || !activeCategories.length} className={`${buttonClass} bg-indigo-600 text-white flex gap-2 items-center`} onClick={() => { setForm({ ...emptyForm(), categoryId: String(activeCategories[0]?.id || '') }); setFormError(''); setConflict(false); }}><Plus size={16} />Thêm sản phẩm</button></div>
       </div>
       {notice && <p role="status" className="rounded-xl bg-emerald-50 p-4 text-emerald-800">{notice}</p>}
       {categoryError && <p role="alert" className="rounded-xl bg-amber-50 p-4 text-amber-800">Không tải được danh mục: {categoryError} <button className="underline" onClick={() => { setCategoryError(''); setRefresh((v) => v + 1); }}>Thử lại</button></p>}
@@ -167,6 +169,7 @@ export default function AdminProductsPage() {
         <div className="flex justify-end gap-3"><button type="button" className={buttonClass} disabled={busy} onClick={() => setForm(null)}>Hủy</button><button disabled={busy || conflict} className={`${buttonClass} bg-indigo-600 text-white`}>{busy ? 'Đang lưu…' : 'Lưu sản phẩm'}</button></div>
         </form>
       </section></div>}
+      {importOpen && <CatalogImportDialog kind={importOpen} onClose={() => setImportOpen(false)} onImported={() => { setRefresh(value => value + 1); setNotice("Đã tải lại sản phẩm sau phiên nhập dữ liệu."); }} />}
       {deleting && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4"><section role="dialog" aria-modal="true" aria-labelledby="delete-title" className="w-full max-w-md rounded-3xl bg-white p-6 space-y-4"><h2 id="delete-title" className="text-lg font-bold">Xóa sản phẩm #{deleting.id}?</h2><p className="text-sm">{deleting.name} sẽ bị xóa khỏi hệ thống. Bạn có thể chọn trạng thái ngừng kinh doanh nếu muốn giữ sản phẩm.</p>{deleteError && <p role="alert" className="text-rose-700 text-sm">{deleteError}</p>}<div className="flex justify-end gap-3"><button disabled={busy} className={buttonClass} onClick={() => setDeleting(null)}>Hủy</button><button disabled={busy} className={`${buttonClass} bg-rose-600 text-white`} onClick={remove}>{busy ? 'Đang xóa…' : 'Xóa sản phẩm'}</button></div></section></div>}
     </div>
   );
