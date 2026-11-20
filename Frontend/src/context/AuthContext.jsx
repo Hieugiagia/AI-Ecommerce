@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { authService } from '../services/authService';
+import { confirmedAuth } from '../services/authModel';
 import { profilePayload, confirmedProfile } from '../services/profileModel';
 
 const AuthContext = createContext();
@@ -84,13 +85,7 @@ export function AuthProvider({ children }) {
     try {
       const response = await authService.login(email, password);
 
-      const authToken = response?.accessToken || response?.token || 'mock_jwt_token_' + Date.now();
-      const authUser = response?.user || {
-        id: response?.id || 'usr_' + Date.now(),
-        fullName: response?.fullName || email.split('@')[0],
-        email: email.trim().toLowerCase(),
-        role: response?.role || (email.toLowerCase().includes('admin') ? 'ROLE_ADMIN' : 'ROLE_USER'),
-      };
+      const { token: authToken, user: authUser } = confirmedAuth(response);
 
       if (response?.refreshToken) {
         localStorage.setItem('refresh_token', response.refreshToken);
@@ -138,14 +133,7 @@ export function AuthProvider({ children }) {
     try {
       const response = await authService.register(userData);
 
-      const authToken = response?.accessToken || response?.token || 'mock_jwt_token_' + Date.now();
-      const authUser = response?.user || {
-        id: response?.id || 'usr_' + Date.now(),
-        fullName: userData.fullName,
-        email: userData.email.trim().toLowerCase(),
-        phone: userData.phone || '',
-        role: response?.role || 'ROLE_USER',
-      };
+      const { token: authToken, user: authUser } = confirmedAuth(response);
 
       if (response?.refreshToken) {
         localStorage.setItem('refresh_token', response.refreshToken);
@@ -227,7 +215,7 @@ export function AuthProvider({ children }) {
         user,
         token,
         loading,
-        isAuthenticated: !!user,
+        isAuthenticated: !!(user && token),
         isAdmin: user?.role === 'admin' || user?.role === 'ROLE_ADMIN',
         login,
         register,
