@@ -10,7 +10,7 @@ const button = 'rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibo
 const input = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm';
 const money = (value) => value == null ? 'Chưa có thông tin' : new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 const date = formatDisplayDateTime;
-const actionLabels = { CONFIRMED: 'Xác nhận đơn', PROCESSING: 'Bắt đầu đóng gói', SHIPPED: 'Bàn giao vận chuyển', DELIVERED: 'Hoàn tất giao hàng và thu COD' };
+const actionLabels = { CONFIRMED: 'Xác nhận đơn', PROCESSING: 'Bắt đầu đóng gói', SHIPPED: 'Bàn giao vận chuyển', DELIVERED: 'Hoàn tất giao hàng' };
 
 function Modal({ title, busy, onClose, children }) {
   const dialog = useRef(null);
@@ -147,6 +147,7 @@ function AdminOrders({ authorized }) {
         expectedStatus: transition.expectedStatus,
         status: transition.status,
         codCollected,
+        paymentMethod: transition.entry.order.paymentMethod,
       });
       if (!mounted.current) return;
       setNotice('Đã cập nhật ' + confirmed.order.orderCode + ': ' + ORDER_STATUSES[confirmed.order.status] + '. Thanh toán: ' + (PAYMENT_STATUSES[confirmed.order.paymentStatus] || 'Chưa có thông tin') + '.');
@@ -193,10 +194,10 @@ function AdminOrders({ authorized }) {
     {transition && <Modal title={actionLabels[transition.status]} busy={busy} onClose={() => setTransition(null)}>
       <form onSubmit={confirmTransition} className="space-y-5">
         <p className="break-all text-sm font-semibold">{transition.entry.order.orderCode}</p><p className="text-sm">{ORDER_STATUSES[transition.expectedStatus]} → <strong>{ORDER_STATUSES[transition.status]}</strong></p>
-        {transition.status === 'DELIVERED' && <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 space-y-3"><p className="text-sm font-semibold">Số tiền COD cần thu: {money(transition.entry.order.total)}</p><label className="flex items-start gap-3 text-sm"><input type="checkbox" required disabled={busy || blocked} checked={codCollected} onChange={(event) => setCodCollected(event.target.checked)} className="mt-1" /><span>Tôi xác nhận đã giao hàng thành công và thu đủ tiền COD. Thanh toán sẽ được ghi nhận là đã thanh toán.</span></label></div>}
+        {transition.status === 'DELIVERED' && transition.entry.order.paymentMethod === 'COD' && <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 space-y-3"><p className="text-sm font-semibold">Số tiền COD cần thu: {money(transition.entry.order.total)}</p><label className="flex items-start gap-3 text-sm"><input type="checkbox" required disabled={busy || blocked} checked={codCollected} onChange={(event) => setCodCollected(event.target.checked)} className="mt-1" /><span>Tôi xác nhận đã giao hàng thành công và thu đủ tiền COD. Thanh toán sẽ được ghi nhận là đã thanh toán.</span></label></div>}
         {transitionError && <p role="alert" className="text-sm text-rose-700">{transitionError}</p>}
         {blocked && <p className="text-sm text-slate-500">Dữ liệu đã được yêu cầu tải lại. Đóng hộp thoại để xem trạng thái mới trước khi thao tác tiếp.</p>}
-        <div className="flex justify-end gap-3"><button type="button" disabled={busy} className={button} onClick={() => setTransition(null)}>Đóng</button><button type="submit" disabled={busy || blocked || (transition.status === 'DELIVERED' && !codCollected)} className={`${button} bg-indigo-600 text-white`}>{busy ? 'Đang cập nhật...' : 'Xác nhận'}</button></div>
+        <div className="flex justify-end gap-3"><button type="button" disabled={busy} className={button} onClick={() => setTransition(null)}>Đóng</button><button type="submit" disabled={busy || blocked || (transition.status === 'DELIVERED' && transition.entry.order.paymentMethod === 'COD' && !codCollected)} className={`${button} bg-indigo-600 text-white`}>{busy ? 'Đang cập nhật...' : 'Xác nhận'}</button></div>
       </form>
     </Modal>}
   </div>;

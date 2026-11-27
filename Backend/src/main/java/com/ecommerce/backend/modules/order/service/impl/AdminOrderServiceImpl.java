@@ -134,9 +134,6 @@ public class AdminOrderServiceImpl implements AdminOrderService {
             throw new AppException(ErrorCode.ADMIN_ORDER_TRANSITION_INVALID);
         }
 
-        if (request.status() == OrderStatus.DELIVERED && !Boolean.TRUE.equals(request.codCollected())) {
-            throw new AppException(ErrorCode.COD_COLLECTION_REQUIRED);
-        }
 
         if (request.status() != OrderStatus.DELIVERED
                 && Boolean.TRUE.equals(request.codCollected())) {
@@ -163,13 +160,25 @@ public class AdminOrderServiceImpl implements AdminOrderService {
                 .orElseThrow(() ->
                         new AppException(ErrorCode.ADMIN_ORDER_PAYMENT_INVALID));
 
-        if (!isPendingCod(payment) || payment.getAmount().compareTo(order.getTotalAmount()) != 0) {
+        if (payment.getPaymentMethod() == PaymentMethod.COD
+                && request.status() == OrderStatus.DELIVERED
+                && !Boolean.TRUE.equals(request.codCollected())) {
+            throw new AppException(ErrorCode.COD_COLLECTION_REQUIRED);
+        }
+
+        if (payment.getPaymentMethod() == PaymentMethod.MOMO
+                && Boolean.TRUE.equals(request.codCollected())) {
+            throw new AppException(ErrorCode.ADMIN_ORDER_TRANSITION_INVALID);
+        }
+
+        if (!isProcessable(payment) || payment.getAmount().compareTo(order.getTotalAmount()) != 0) {
             throw new AppException(ErrorCode.ADMIN_ORDER_PAYMENT_INVALID);
         }
 
         order.setStatus(request.status());
 
-        if (request.status() == OrderStatus.DELIVERED) {
+        if (request.status() == OrderStatus.DELIVERED
+                && payment.getPaymentMethod() == PaymentMethod.COD) {
             payment.setStatus(PaymentStatus.SUCCESS);
             payment.setPaidAt(LocalDateTime.now());
         }
@@ -192,9 +201,20 @@ public class AdminOrderServiceImpl implements AdminOrderService {
         }
     }
 
-    private boolean isPendingCod(Payment payment) {
-        return payment != null && payment.getPaymentMethod() == PaymentMethod.COD
-                && payment.getStatus() == PaymentStatus.PENDING;
+    private boolean isProcessable(Payment payment) {
+        if (payment == null) {
+            return false;
+        }
+
+        boolean pendingCod =
+                payment.getPaymentMethod() == PaymentMethod.COD
+                        && payment.getStatus() == PaymentStatus.PENDING;
+
+        boolean paidMomo =
+                payment.getPaymentMethod() == PaymentMethod.MOMO
+                        && payment.getStatus() == PaymentStatus.SUCCESS;
+
+        return pendingCod || paidMomo;
     }
 
     private List<OrderStatus> nextStatuses(OrderStatus status) {
@@ -217,7 +237,7 @@ public class AdminOrderServiceImpl implements AdminOrderService {
                 .findByOrderId(order.getId())
                 .orElse(null);
 
-        List<OrderStatus> allowed = isPendingCod(payment) && payment.getAmount().compareTo(order.getTotalAmount()) == 0 ? nextStatuses(order.getStatus()) : List.of();
+        List<OrderStatus> allowed = isProcessable(payment) && payment.getAmount().compareTo(order.getTotalAmount()) == 0 ? nextStatuses(order.getStatus()) : List.of();
 
         return new AdminOrderResponse(
                 orderResponseMapper.toResponse(order),

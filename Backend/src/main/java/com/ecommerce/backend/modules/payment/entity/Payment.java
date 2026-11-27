@@ -40,4 +40,19 @@ public class Payment extends BaseEntity {
 
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
+
+    @Column(name = "momo_request_id", unique = true, length = 36)
+    private String momoRequestId;
+
+    @Column(name = "momo_pay_url", length = 2048)
+    private String momoPayUrl;
+
+    @Column(name = "momo_redirect_url", length = 2048)
+    private String momoRedirectUrl;
+
+    @Column(name = "momo_ipn_url", length = 2048)
+    private String momoIpnUrl;
+
+    @Column(name = "momo_started_at")
+    private LocalDateTime momoStartedAt;
 }

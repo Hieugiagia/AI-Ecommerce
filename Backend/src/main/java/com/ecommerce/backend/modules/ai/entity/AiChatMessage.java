@@ -26,4 +26,10 @@ public class AiChatMessage extends BaseEntity {
 
     @Column(name = "content", nullable = false, columnDefinition = "TEXT")
     private String content;
+
+    @Column(name = "client_request_id", updatable = false)
+    private java.util.UUID clientRequestId;
+
+    @Column(name = "recommended_product_ids", columnDefinition = "TEXT")
+    private String recommendedProductIds;
 }
