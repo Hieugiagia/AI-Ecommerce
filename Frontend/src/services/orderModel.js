@@ -74,7 +74,9 @@ export function normalizeAdminOrder(data) {
   }
   const order = normalizeOrder(data.order);
   const next = ADMIN_NEXT_STATUS[order.status];
-  const allowedNextStatuses = order.paymentMethod === 'COD' && order.paymentStatus === 'PENDING'
+  const processable = (order.paymentMethod === 'COD' && order.paymentStatus === 'PENDING')
+    || (order.paymentMethod === 'MOMO' && order.paymentStatus === 'SUCCESS');
+  const allowedNextStatuses = processable
     && next && data.allowedNextStatuses.includes(next) ? [next] : [];
   return { ...data, order, allowedNextStatuses };
 }
@@ -94,15 +96,16 @@ export function adminOrderListQuery(params = {}) {
   return query.toString();
 }
 
-export function adminStatusPayload({ expectedStatus, status, codCollected = false } = {}) {
+export function adminStatusPayload({ expectedStatus, status, codCollected = false, paymentMethod = 'COD' } = {}) {
   if (!ADMIN_NEXT_STATUS[expectedStatus] || ADMIN_NEXT_STATUS[expectedStatus] !== status) {
     throw new Error('Chỉ được chuyển đơn sang bước tiếp theo.');
   }
-  if (status === 'DELIVERED' && codCollected !== true) {
+  if (status === 'DELIVERED' && paymentMethod !== 'MOMO' && codCollected !== true) {
     throw new Error('Bạn phải xác nhận đã giao hàng và thu đủ tiền COD.');
   }
   if (status !== 'DELIVERED' && codCollected !== false) {
     throw new Error('Chỉ xác nhận thu tiền khi hoàn tất giao hàng.');
   }
+  if (paymentMethod === 'MOMO' && codCollected !== false) throw new Error('Đơn MoMo không thu thêm COD.');
   return { expectedStatus, status, codCollected };
 }

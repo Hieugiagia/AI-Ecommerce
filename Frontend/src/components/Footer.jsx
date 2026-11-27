@@ -319,33 +319,33 @@ export default function Footer() {
               Thanh Toán An Toàn
             </h4>
             <p className="text-xs text-slate-500 leading-relaxed">
-              Hỗ trợ đa dạng phương thức thanh toán bảo mật PCI-DSS tiêu chuẩn ngân hàng:
+              Thanh toán COD đang được hỗ trợ. MoMo đang được tích hợp ở môi trường thử nghiệm; phương thức khả dụng được hiển thị khi đặt hàng.
             </p>
 
             <div className="grid grid-cols-3 gap-2">
               <div className="p-2.5 bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 hover:border-indigo-200 rounded-2xl text-center text-[10px] font-bold text-slate-800 transition-colors">
                 <span className="text-blue-600 block text-xs font-black">VietQR</span>
-                <span>Quét mã 24/7</span>
+                <span>Chưa tích hợp</span>
               </div>
               <div className="p-2.5 bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 hover:border-indigo-200 rounded-2xl text-center text-[10px] font-bold text-slate-800 transition-colors">
                 <span className="text-pink-600 block text-xs font-black">MoMo</span>
-                <span>Ví điện tử</span>
+                <span>Thử nghiệm</span>
               </div>
               <div className="p-2.5 bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 hover:border-indigo-200 rounded-2xl text-center text-[10px] font-bold text-slate-800 transition-colors">
                 <span className="text-blue-700 block text-xs font-black">ZaloPay</span>
-                <span>Giảm đến 100k</span>
+                <span>Chưa tích hợp</span>
               </div>
               <div className="p-2.5 bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 hover:border-indigo-200 rounded-2xl text-center text-[10px] font-bold text-slate-800 transition-colors">
                 <span className="text-amber-600 block text-xs font-black">VNPAY</span>
-                <span>QR Ngân hàng</span>
+                <span>Chưa tích hợp</span>
               </div>
               <div className="p-2.5 bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 hover:border-indigo-200 rounded-2xl text-center text-[10px] font-bold text-slate-800 transition-colors">
                 <span className="text-slate-900 block text-xs font-black">Apple Pay</span>
-                <span>Chạm một chạm</span>
+                <span>Chưa tích hợp</span>
               </div>
               <div className="p-2.5 bg-slate-50 hover:bg-indigo-50/50 border border-slate-200/80 hover:border-indigo-200 rounded-2xl text-center text-[10px] font-bold text-slate-800 transition-colors">
                 <span className="text-indigo-600 block text-xs font-black">VISA/Master</span>
-                <span>Thẻ quốc tế</span>
+                <span>Chưa tích hợp</span>
               </div>
             </div>
           </div>

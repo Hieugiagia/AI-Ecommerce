@@ -27,6 +27,9 @@ public class AiChatSession extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Column(name = "client_key", unique = true, updatable = false)
+    private UUID clientKey;
+
     @Column(name = "title", length = 255)
     @Builder.Default
     private String title = "Cuộc trò chuyện mới";

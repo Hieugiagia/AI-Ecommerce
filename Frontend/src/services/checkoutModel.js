@@ -5,7 +5,8 @@ export function checkoutStorageKey(account) {
   return 'ai_ecommerce_checkout:' + account;
 }
 
-export function checkoutPayload(checkoutKey, expectedTotal, form) {
+export function checkoutPayload(checkoutKey, expectedTotal, form, paymentMethod = 'COD') {
+  if (!['COD', 'MOMO'].includes(paymentMethod)) throw new Error('Phương thức thanh toán chưa được hỗ trợ.');
   if (!keyPattern.test(checkoutKey)) throw new Error('Mã đặt hàng không hợp lệ.');
   if (expectedTotal === null || expectedTotal === '' || !Number.isFinite(Number(expectedTotal)) || Number(expectedTotal) < 0) {
     throw new Error('Tổng tiền không hợp lệ. Vui lòng tải lại giỏ hàng.');
@@ -21,22 +22,22 @@ export function checkoutPayload(checkoutKey, expectedTotal, form) {
   if (!/^\+?[0-9]{8,15}$/.test(shippingInfo.phone)) {
     throw new Error('Số điện thoại gồm 8–15 chữ số, có thể bắt đầu bằng +.');
   }
-  return { checkoutKey, paymentMethod: 'COD', expectedTotal: Number(expectedTotal), shippingInfo };
+  return { checkoutKey, paymentMethod, expectedTotal: Number(expectedTotal), shippingInfo };
 }
 
 export function readCheckoutAttempt(storage, account) {
   if (!account) return null;
   try {
     const raw = JSON.parse(storage.getItem(checkoutStorageKey(account)) || 'null');
-    if (!raw || raw.paymentMethod !== 'COD') return null;
-    return checkoutPayload(raw.checkoutKey, raw.expectedTotal, raw.shippingInfo);
+    if (!raw || !['COD', 'MOMO'].includes(raw.paymentMethod)) return null;
+    return checkoutPayload(raw.checkoutKey, raw.expectedTotal, raw.shippingInfo, raw.paymentMethod);
   } catch {
     return null;
   }
 }
 
 export function saveCheckoutAttempt(storage, account, payload) {
-  const validated = checkoutPayload(payload.checkoutKey, payload.expectedTotal, payload.shippingInfo);
+  const validated = checkoutPayload(payload.checkoutKey, payload.expectedTotal, payload.shippingInfo, payload.paymentMethod);
   storage.setItem(checkoutStorageKey(account), JSON.stringify(validated));
   return validated;
 }
@@ -49,7 +50,7 @@ export function checkoutRejected(error) {
 
 export function normalizeCheckout(data) {
   if (!data || !Number.isInteger(data.id) || typeof data.orderCode !== 'string' || !data.orderCode
-      || !Array.isArray(data.items) || !data.items.length || data.paymentMethod !== 'COD') {
+      || !Array.isArray(data.items) || !data.items.length || !['COD', 'MOMO'].includes(data.paymentMethod)) {
     throw new Error('Chưa đọc được xác nhận đơn hàng. Vui lòng kiểm tra lại kết quả.');
   }
   const result = { ...data };

@@ -15,7 +15,9 @@ export default function LoginPage() {
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const redirectPath = location.state?.from?.pathname || '/profile';
+  const requestedPath = location.state?.from?.pathname;
+  const redirectPath = typeof requestedPath === 'string' && requestedPath.startsWith('/') && !requestedPath.startsWith('//')
+    ? requestedPath + (location.state?.from?.search || '') : '/profile';
 
   const handleSubmit = async (e) => {
     e.preventDefault();

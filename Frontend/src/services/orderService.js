@@ -20,7 +20,7 @@ export const orderService = {
    * @param {Object} checkoutData
    */
   async checkout(checkoutData) {
-    const payload = checkoutPayload(checkoutData.checkoutKey, checkoutData.expectedTotal, checkoutData.shippingInfo);
+    const payload = checkoutPayload(checkoutData.checkoutKey, checkoutData.expectedTotal, checkoutData.shippingInfo, checkoutData.paymentMethod);
     const data = await apiRequest('/orders/checkout', {
       method: 'POST',
       body: payload,

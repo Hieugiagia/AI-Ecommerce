@@ -92,6 +92,11 @@ public class SecurityConfig {
                                 "/admin/**"
                         )
                         .hasRole("ADMIN")
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/payments/momo/ipn"
+                        )
+                        .permitAll()
 
                         .anyRequest()
                         .authenticated()

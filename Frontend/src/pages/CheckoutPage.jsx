@@ -5,7 +5,6 @@ import {
   ShieldCheck,
   Truck,
   CreditCard,
-  Banknote,
   CheckCircle2,
   ArrowRight,
 } from 'lucide-react';
@@ -16,6 +15,7 @@ import SavedAddressPicker from '../components/SavedAddressPicker';
 import LocationFields from '../components/LocationFields';
 import { shippingFromAddress } from '../services/addressModel';
 import { checkoutPayload, checkoutRejected } from '../services/checkoutModel';
+import PaymentMethods from '../components/PaymentMethods';
 
 export default function CheckoutPage() {
   const {
@@ -33,6 +33,7 @@ export default function CheckoutPage() {
     notes: '',
   }));
   const [legacyLocation, setLegacyLocation] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('COD');
   const [receipt, setReceipt] = useState(null);
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderError, setOrderError] = useState('');
@@ -121,7 +122,7 @@ export default function CheckoutPage() {
     event.preventDefault();
     if (submitting.current || !canCheckout) return;
     try {
-      const payload = checkoutPayload(crypto.randomUUID(), total, formData);
+      const payload = checkoutPayload(crypto.randomUUID(), total, formData, paymentMethod);
       const attempt = beginCheckout(payload);
       if (!attempt.success) { setOrderError(attempt.error); return; }
       void submitCheckout(attempt.payload);
@@ -135,12 +136,13 @@ export default function CheckoutPage() {
       <CheckCircle2 className="w-14 h-14 text-emerald-600" />
       <h1 className="text-2xl font-bold">Đặt hàng thành công</h1>
       <p>Mã đơn hàng: <strong className="break-all">{receipt.orderCode}</strong></p>
-      <p className="text-sm text-slate-600">Đơn đã được ghi nhận. Bạn thanh toán khi nhận hàng (COD).</p>
+      <p className="text-sm text-slate-600">{receipt.paymentMethod === 'MOMO' ? 'Đơn đã được tạo và đang chờ thanh toán MoMo.' : 'Đơn đã được ghi nhận. Bạn thanh toán khi nhận hàng (COD).'}</p>
+      {receipt.paymentMethod === 'MOMO' && <Link to={'/payments/momo?orderCode=' + encodeURIComponent(receipt.orderCode)} className="inline-block rounded-xl bg-orange-700 px-5 py-3 font-semibold text-white">Tiếp tục thanh toán MoMo</Link>}
       <div className="rounded-3xl border border-slate-200 bg-white p-6 space-y-4">
         {receipt.items.map((item) => <div key={item.productId} className="flex justify-between gap-4 text-sm"><span>{item.productName} × {item.quantity}</span><strong>{formatVND(item.subtotal)}</strong></div>)}
         <div className="flex justify-between border-t pt-4"><span>Tiền hàng</span><span>{formatVND(receipt.subtotal)}</span></div>
         <div className="flex justify-between"><span>Phí giao hàng</span><span>{formatVND(receipt.shippingFee)}</span></div>
-        <div className="flex justify-between font-bold text-lg"><span>Tổng tiền COD</span><span>{formatVND(receipt.total)}</span></div>
+        <div className="flex justify-between font-bold text-lg"><span>Tổng thanh toán</span><span>{formatVND(receipt.total)}</span></div>
       </div>
       {cartError && <p role="alert" className="text-sm text-amber-800">Đơn đã tạo thành công nhưng chưa tải lại được giỏ hàng. Bạn có thể mở giỏ và tải lại; không cần đặt lại đơn.</p>}
       <div className="flex flex-wrap gap-4"><Link className="text-indigo-600 underline" to={`/orders?orderCode=${encodeURIComponent(receipt.orderCode)}`}>Xem đơn hàng</Link><Link className="text-indigo-600 underline" to="/products">Tiếp tục mua sắm</Link><Link className="text-indigo-600 underline" to="/">Về trang chủ</Link></div>
@@ -273,10 +275,7 @@ export default function CheckoutPage() {
               2. Phương thức thanh toán
             </h2>
 
-            <div className="flex items-center gap-3 rounded-2xl border border-indigo-200 bg-indigo-50 p-4">
-              <Banknote className="h-6 w-6 text-indigo-600" />
-              <div><p className="font-semibold text-sm">Thanh toán khi nhận hàng (COD)</p><p className="text-xs text-slate-500 mt-1">Thanh toán khi nhận hàng. Đơn mới được ghi nhận ở trạng thái chờ xác nhận.</p></div>
-            </div>
+            <PaymentMethods value={paymentMethod} onChange={setPaymentMethod} />
           </div>
         </div>
 

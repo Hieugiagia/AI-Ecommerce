@@ -1,27 +1,30 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Send, Bot, User, ArrowRight } from 'lucide-react';
-import { PRODUCTS } from '../data/mockData';
-import { Link } from 'react-router-dom';
-import { aiService } from '../services/aiService';
+import { Sparkles, X, Send, Bot, User, ArrowRight, RotateCcw, History } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { useAiConversation } from '../hooks/useAiConversation';
+import { formatDisplayDateTime } from '../services/dateDisplay';
+import { Link, useLocation } from 'react-router-dom';
+import AiPreferences from './AiPreferences';
 
-export default function AiChatWidget({ isOpen, onClose }) {
+export default function AiChatWidget(props) {
+  const { user, isAuthenticated } = useAuth();
+  return <AiChatSession key={user?.id || 'guest'} {...props} account={user?.id} authenticated={isAuthenticated}/>;
+}
+function AiChatSession({ isOpen, onClose, account, authenticated }) {
+  const location = useLocation();
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      text: 'Xin chào! Mình là trợ lý AI tư vấn của Zentro Store. Bạn đang tìm thiết bị nào hoặc cần tư vấn cấu hình ra sao?',
-      recommendedProducts: [],
-    },
-  ]);
-  const [isTyping, setIsTyping] = useState(false);
+  const [historyOpen,setHistoryOpen]=useState(false);
+  const [preferencesOpen,setPreferencesOpen]=useState(false);
   const messagesEndRef = useRef(null);
+  const {messages,sessions,mode,loading,isTyping,error,historyError,failedAttempt,selectedId,
+    send,resetChat,openSession,loadHistory,retry,canSend,canReset}=useAiConversation({account,authenticated,isOpen});
 
   const quickPrompts = [
-    'Laptop cho đồ họa & lập trình?',
-    'iPhone 15 Pro Max giá tốt?',
-    'Tai nghe chống ồn đỉnh nhất?',
-    'Rabbit R1 là gì?',
+    'Laptop dưới 20 triệu cho học tập',
+    'Điện thoại 256GB đang còn hàng',
+    'Tai nghe dưới 3 triệu',
+    'Giúp mình chọn thiết bị phù hợp',
   ];
 
   const scrollToBottom = () => {
@@ -34,76 +37,10 @@ export default function AiChatWidget({ isOpen, onClose }) {
     }
   }, [messages, isOpen, isTyping]);
 
-  const handleSend = async (userText) => {
-    const textToSend = userText || input;
-    if (!textToSend.trim()) return;
-
-    const userMsg = { role: 'user', text: textToSend };
-    const currentMessages = [...messages, userMsg];
-    setMessages(currentMessages);
-    if (!userText) setInput('');
-    setIsTyping(true);
-
-    try {
-      const history = currentMessages.map((m) => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.text }],
-      }));
-      const res = await aiService.chat(textToSend, history);
-      if (res && (res.reply || res.text || res.message)) {
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            text: res.reply || res.text || res.message,
-            recommendedProducts: res.recommendedProducts || [],
-          },
-        ]);
-        setIsTyping(false);
-        return;
-      }
-    } catch {
-      // Fallback về mock matching nếu Backend chưa bật
-    }
-
-    // AI intelligent fallback matching
-    setTimeout(() => {
-      let replyText = '';
-      let matched = [];
-      const lower = textToSend.toLowerCase();
-
-      if (lower.includes('laptop') || lower.includes('macbook') || lower.includes('lập trình') || lower.includes('xps')) {
-        matched = PRODUCTS.filter((p) => p.category === 'laptop');
-        replyText =
-          'Với nhu cầu làm việc, code và đồ họa nặng, mình gợi ý MacBook Pro 16 M3 Max (pin 22h, 36GB RAM chạy mô hình AI cực tốt) hoặc Dell XPS 13 Plus mỏng nhẹ tinh tế!';
-      } else if (lower.includes('iphone') || lower.includes('s24') || lower.includes('điện thoại')) {
-        matched = PRODUCTS.filter((p) => p.category === 'dien-thoai');
-        replyText =
-          'Trong phân khúc flagship hiện tại, iPhone 15 Pro Max nổi bật với khung titan và zoom quang 5x, còn Galaxy S24 Ultra trang bị các tính năng Galaxy AI dịch thuật và khoanh vùng tìm kiếm siêu nhạy.';
-      } else if (lower.includes('tai nghe') || lower.includes('âm thanh') || lower.includes('chống ồn')) {
-        matched = PRODUCTS.filter((p) => p.category === 'am-thanh');
-        replyText =
-          'Sony WH-1000XM5 đang là lựa chọn số 1 về khả năng chống ồn chủ động và đàm thoại lọc gió thông minh!';
-      } else if (lower.includes('rabbit') || lower.includes('phụ kiện') || lower.includes('ai')) {
-        matched = PRODUCTS.filter((p) => p.category === 'phu-kien-ai');
-        replyText =
-          'Rabbit R1 là thiết bị AI LAM điều khiển bằng giọng nói thế hệ mới cực hot. Ngoài ra bạn có thể tham khảo bàn phím Keychron Q1 Pro siêu đầm tay.';
-      } else {
-        matched = PRODUCTS.slice(0, 2);
-        replyText = `Mình đã ghi nhận nhu cầu "${textToSend}" của bạn. Dựa trên phân tích xu hướng mua sắm, đây là các sản phẩm được đánh giá cao nhất bạn có thể tham khảo:`;
-      }
-
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          text: replyText,
-          recommendedProducts: matched,
-        },
-      ]);
-      setIsTyping(false);
-    }, 600);
-  };
+  function handleSend(userText) {
+    if(send(userText || input)){setInput('');return true;}
+    return false;
+  }
 
   const formatVND = (price) => {
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(price);
@@ -157,13 +94,16 @@ export default function AiChatWidget({ isOpen, onClose }) {
                 <div>
                   <h3 className="font-bold text-sm flex items-center gap-2">
                     Trợ lý Mua sắm AI
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-pulse" />
+
                   </h3>
-                  <p className="text-[11px] text-slate-300">Tư vấn cấu hình & ưu đãi thời gian thực</p>
+                  <p className="text-[11px] text-slate-300">Gợi ý theo sản phẩm của Zentro Store</p>
                 </div>
               </div>
 
+              {authenticated && <button type="button" aria-label="Lịch sử trò chuyện" aria-expanded={historyOpen} onClick={()=>{setHistoryOpen(value=>!value);setPreferencesOpen(false);}} className="relative z-10 p-1.5 text-slate-300 hover:text-white"><History size={18}/></button>}
+              <button type="button" disabled={!canReset} onClick={()=>{resetChat();setInput('');}} aria-label="Bắt đầu cuộc trò chuyện mới" className="relative z-10 p-1.5 text-slate-300 hover:text-white disabled:opacity-40"><RotateCcw size={17}/></button>
               <button
+                aria-label="Đóng trợ lý tư vấn"
                 onClick={onClose}
                 className="relative z-10 p-1.5 text-slate-300 hover:text-white rounded-full hover:bg-white/10 transition-colors cursor-pointer"
               >
@@ -171,11 +111,20 @@ export default function AiChatWidget({ isOpen, onClose }) {
               </button>
             </div>
 
+            {authenticated && historyOpen && <section aria-label="Danh sách hội thoại" className="max-h-44 overflow-y-auto border-b border-slate-200 bg-slate-50 p-3 text-sm">
+              <div className="mb-2 flex justify-between items-center"><strong>Cuộc trò chuyện của bạn</strong><button type="button" disabled={isTyping || loading} onClick={loadHistory} className="text-orange-700 underline">Tải lại</button></div>
+              {sessions.map(session=><button type="button" key={session.id} disabled={isTyping || loading || !!failedAttempt} onClick={async()=>{await openSession(session.id);setHistoryOpen(false);setInput('');}} aria-pressed={session.id===selectedId} className="mb-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-left hover:bg-orange-50"><span className="block truncate">{session.title}</span><small className="text-slate-500">{formatDisplayDateTime(session.updatedAt || session.createdAt)}</small></button>)}
+              {!sessions.length&&!loading&&mode==='saved'&&<p className="text-slate-500">Chưa có hội thoại đã lưu.</p>}
+            </section>}
+            {authenticated && <div aria-live="polite" className="border-b border-slate-100 px-4 py-2 text-xs text-slate-500">{loading ? 'Đang tải lịch sử...' : mode==='temporary' ? 'Lịch sử chưa sẵn sàng. Cuộc trò chuyện này chưa được lưu.' : mode==='saved' ? 'Lịch sử được lưu theo tài khoản của bạn.' : 'Chưa tải được lịch sử.'}{(historyError||mode==='temporary'||mode==='error')&&<button type="button" disabled={isTyping||loading} onClick={loadHistory} className="ml-2 text-orange-700 underline">Thử tải lịch sử</button>}{historyError&&<p role="status">{historyError}</p>}</div>}
+            {authenticated && <div className="border-b border-slate-100 px-4 py-2 text-xs"><button type="button" aria-expanded={preferencesOpen} onClick={()=>{setPreferencesOpen(value=>!value);setHistoryOpen(false);}} className="font-semibold text-orange-700">{preferencesOpen ? 'Đóng bộ chọn nhu cầu' : 'Chọn loại sản phẩm, hãng và ngân sách'}</button></div>}
+            {authenticated && preferencesOpen && <AiPreferences canSend={canSend} onSend={prompt=>{if(handleSend(prompt))setPreferencesOpen(false);}}/>}
             {/* Quick Prompts Strip */}
             <div className="px-4 py-2.5 bg-slate-50/90 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
               {quickPrompts.map((prompt, idx) => (
                 <button
                   key={idx}
+                  disabled={!canSend}
                   onClick={() => handleSend(prompt)}
                   className="text-[11px] font-medium text-slate-600 hover:text-indigo-600 bg-white hover:bg-indigo-50/80 border border-slate-200/80 hover:border-indigo-200 px-3 py-1 rounded-full whitespace-nowrap transition-all cursor-pointer shrink-0 shadow-2xs"
                 >
@@ -185,7 +134,7 @@ export default function AiChatWidget({ isOpen, onClose }) {
             </div>
 
             {/* Messages Area with animated line-by-line reveal */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/50">
+            <div role="log" aria-label="Cuộc trò chuyện tư vấn" aria-live="polite" className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/50">
               {messages.map((msg, index) => (
                 <motion.div
                   key={index}
@@ -202,7 +151,7 @@ export default function AiChatWidget({ isOpen, onClose }) {
 
                   <div className="max-w-[85%] space-y-2">
                     <div
-                      className={`p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-xs ${
+                      className={`whitespace-pre-wrap break-words p-3.5 rounded-2xl text-xs sm:text-sm leading-relaxed shadow-xs ${
                         msg.role === 'user'
                           ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-br-xs'
                           : 'bg-white text-slate-800 border border-slate-200/80 rounded-bl-xs'
@@ -214,15 +163,16 @@ export default function AiChatWidget({ isOpen, onClose }) {
                     {/* Sản phẩm gợi ý từ AI */}
                     {msg.recommendedProducts && msg.recommendedProducts.length > 0 && (
                       <div className="space-y-1.5 pt-1">
-                        {msg.recommendedProducts.slice(0, 2).map((item) => (
+                        {msg.recommendedProducts.slice(0, 4).map((item) => (
                           <Link
                             key={item.id}
-                            to={`/product/${item.id}`}
+                            to={'/product/' + encodeURIComponent(item.slug || item.id)}
                             onClick={onClose}
                             className="flex items-center gap-2.5 p-2 bg-white hover:bg-indigo-50/60 border border-slate-200/80 hover:border-indigo-300 rounded-2xl transition-all group shadow-2xs"
                           >
                             <img
                               src={item.image}
+                              onError={event=>{event.currentTarget.onerror=null;event.currentTarget.src='/zentro-mark.svg';}}
                               alt={item.name}
                               className="w-11 h-11 rounded-xl object-contain bg-slate-50 p-1"
                             />
@@ -230,7 +180,7 @@ export default function AiChatWidget({ isOpen, onClose }) {
                               <p className="text-xs font-semibold text-slate-900 truncate group-hover:text-indigo-600">
                                 {item.name}
                               </p>
-                              <p className="text-xs font-bold text-indigo-600">{formatVND(item.price)}</p>
+                              <p className="text-xs font-bold text-indigo-600">{formatVND(item.price)}{mode==='saved'&&<small className="ml-2 font-normal text-slate-500">Giá hiện tại</small>}</p>
                             </div>
                             <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-indigo-600 shrink-0" />
                           </Link>
@@ -263,6 +213,8 @@ export default function AiChatWidget({ isOpen, onClose }) {
                   </div>
                 </motion.div>
               )}
+              {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800"><p>{error}</p>{failedAttempt && <button type="button" disabled={isTyping} onClick={retry} className="mt-2 font-semibold underline">Thử lại câu hỏi</button>}</div>}
+              {!authenticated && <p className="rounded-xl border border-slate-200 bg-white p-3 text-sm"><Link to="/login" state={{from:{pathname:location.pathname}}} onClick={onClose} className="font-semibold text-orange-700 underline">Đăng nhập để trò chuyện</Link> và nhận gợi ý từ trợ lý.</p>}
               <div ref={messagesEndRef} />
             </div>
 
@@ -276,6 +228,9 @@ export default function AiChatWidget({ isOpen, onClose }) {
             >
               <input
                 type="text"
+                aria-label="Câu hỏi cho trợ lý"
+                maxLength={2000}
+                disabled={!authenticated}
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Hỏi AI về cấu hình, so sánh máy..."
@@ -284,7 +239,8 @@ export default function AiChatWidget({ isOpen, onClose }) {
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 type="submit"
-                disabled={!input.trim()}
+                aria-label="Gửi câu hỏi"
+                disabled={!canSend || !input.trim()}
                 className="p-2.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-40 text-white rounded-full transition-all cursor-pointer shadow-sm shadow-indigo-500/20"
               >
                 <Send className="w-4 h-4" />

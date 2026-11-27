@@ -26,6 +26,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ecommerce.backend.modules.payment.service.MomoPaymentService;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -45,12 +47,14 @@ public class CheckoutServiceImpl implements CheckoutService {
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
+    private final MomoPaymentService momoPaymentService;
 
     @Override
     @Transactional
     public CheckoutResponse checkout(String email, CheckoutRequest request) {
-        if (request.paymentMethod() != PaymentMethod.COD) {throw new AppException(
-                    ErrorCode.CHECKOUT_PAYMENT_NOT_SUPPORTED);
+        if (request.paymentMethod() != PaymentMethod.COD
+                && request.paymentMethod() != PaymentMethod.MOMO) {
+            throw new AppException(ErrorCode.CHECKOUT_PAYMENT_NOT_SUPPORTED);
         }
 
         // Dùng cùng khóa với các thao tác sửa giỏ hàng.
@@ -112,6 +116,9 @@ public class CheckoutServiceImpl implements CheckoutService {
         if (total.compareTo(request.expectedTotal()) != 0) {
             throw new AppException(ErrorCode.CHECKOUT_TOTAL_CHANGED);
         }
+        if (request.paymentMethod() == PaymentMethod.MOMO) {
+            momoPaymentService.validateCheckout(total);
+        }
 
         ShippingInfoRequest shipping = request.shippingInfo();
 
@@ -168,10 +175,22 @@ public class CheckoutServiceImpl implements CheckoutService {
 
         Payment payment = Payment.builder()
                 .order(savedOrder)
-                .paymentMethod(PaymentMethod.COD)
+                .paymentMethod(request.paymentMethod())
                 .amount(total)
                 .status(PaymentStatus.PENDING)
                 .build();
+
+        if (request.paymentMethod() == PaymentMethod.MOMO) {
+            payment.setMomoRequestId(UUID.randomUUID().toString());
+
+            payment.setMomoRedirectUrl(
+                    momoPaymentService.redirectUrl()
+            );
+
+            payment.setMomoIpnUrl(
+                    momoPaymentService.ipnUrl()
+            );
+        }
 
         paymentRepository.saveAndFlush(payment);
 
@@ -208,6 +227,14 @@ public class CheckoutServiceImpl implements CheckoutService {
                         )
                 )
                 .toList();
+        PaymentMethod paymentMethod = paymentRepository
+                .findByOrderId(order.getId())
+                .orElseThrow(() ->
+                        new IllegalStateException(
+                                "Không tìm thấy thanh toán của đơn hàng."
+                        )
+                )
+                .getPaymentMethod();
 
         return new CheckoutResponse(
                 order.getId(),
@@ -216,7 +243,7 @@ public class CheckoutServiceImpl implements CheckoutService {
                 order.getSubtotalAmount(),
                 order.getShippingFee(),
                 order.getTotalAmount(),
-                PaymentMethod.COD,
+                paymentMethod,
                 items
         );
     }
